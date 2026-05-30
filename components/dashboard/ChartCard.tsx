@@ -12,7 +12,7 @@ export function ChartCard({
   title,
   chartType,
   config,
-  rows,
+  series,
   isManual,
   onDelete,
   onTitleChange,
@@ -21,7 +21,7 @@ export function ChartCard({
   title: string
   chartType: ChartType
   config: ChartConfig
-  rows: Array<Record<string, unknown>>
+  series?: Array<Record<string, string | number>>
   isManual?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void
@@ -84,7 +84,7 @@ export function ChartCard({
         </div>
         {description ? <p className="text-sm text-text-secondary">{description}</p> : null}
       </div>
-      <ChartRenderer chartType={chartType} config={config} rows={rows} />
+      <ChartRenderer chartType={chartType} config={config} series={series} />
     </Card>
   )
 }

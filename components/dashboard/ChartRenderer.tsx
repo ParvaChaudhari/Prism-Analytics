@@ -26,13 +26,16 @@ const COLORS = ['#0071E3', '#34C759', '#FF9500', '#FF3B30', '#86868B', '#5856D6'
 export function ChartRenderer({
   chartType,
   config,
+  series,
   rows,
 }: {
   chartType: ChartType
   config: ChartConfig
-  rows: Array<Record<string, unknown>>
+  series?: Array<Record<string, string | number>>
+  rows?: Array<Record<string, unknown>>
 }) {
-  const data = buildChartSeries(rows, chartType, config)
+  const data =
+    series ?? (rows ? buildChartSeries(rows, chartType, config) : [])
 
   if (!data.length) {
     return (

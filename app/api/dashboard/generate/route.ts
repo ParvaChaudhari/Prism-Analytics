@@ -3,24 +3,18 @@ import { createClient as createUserClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import { generateAiPayload } from '@/lib/dashboard/generate-ai-payload'
+import {
+  fetchCharts,
+  getDashboardByDatasetId,
+  loadDatasetRows,
+} from '@/lib/dashboard/dashboard-db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPayload } from '@/types/dashboard'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const MAX_CLIENT_ROWS = 2000
-
 type Body = { datasetId: string; regenerate?: boolean }
-
-async function fetchCharts(admin: SupabaseClient, dashboardId: string) {
-  const { data: charts } = await admin
-    .from('charts')
-    .select('id, title, chart_type, config, position, is_manual')
-    .eq('dashboard_id', dashboardId)
-    .order('created_at', { ascending: true })
-  return charts ?? []
-}
 
 async function insertAiCharts(
   admin: SupabaseClient,
@@ -82,32 +76,30 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient()
+    const existing = await getDashboardByDatasetId(admin, body.datasetId, user.id)
 
-    const { data: dataset, error: datasetError } = await admin
-      .from('datasets')
-      .select('id, user_id, cleaned_data, raw_schema')
-      .eq('id', body.datasetId)
-      .eq('user_id', user.id)
-      .single()
-
-    if (datasetError || !dataset) {
+    if (!existing) {
       return NextResponse.json({ error: 'Dataset not found' }, { status: 404 })
     }
 
-    const rows = (dataset.cleaned_data as Array<Record<string, unknown>>) ?? []
+    if (existing.dashboard && !body.regenerate) {
+      return NextResponse.json(
+        { error: 'Dashboard already exists', exists: true },
+        { status: 409 }
+      )
+    }
+
+    const rows = await loadDatasetRows(admin, body.datasetId, user.id)
     const schema =
-      (dataset.raw_schema as ReturnType<typeof buildSchemaFromRows>) ??
+      (existing.dataset.raw_schema as ReturnType<typeof buildSchemaFromRows>) ??
       buildSchemaFromRows(rows)
 
-    const { data: existing } = await admin
-      .from('dashboards')
-      .select('id, title, ai_summary, ai_insights, dataset_id')
-      .eq('dataset_id', dataset.id)
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (existing && body.regenerate) {
-      await admin.from('charts').delete().eq('dashboard_id', existing.id).eq('is_manual', false)
+    if (existing.dashboard && body.regenerate) {
+      await admin
+        .from('charts')
+        .delete()
+        .eq('dashboard_id', existing.dashboard.id)
+        .eq('is_manual', false)
 
       const payload = await generateAiPayload(schema, rows)
 
@@ -119,7 +111,7 @@ export async function POST(request: Request) {
           ai_insights: payload.ai_insights,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existing.id)
+        .eq('id', existing.dashboard.id)
         .select('id, title, ai_summary, ai_insights, dataset_id')
         .single()
 
@@ -130,25 +122,12 @@ export async function POST(request: Request) {
       const { count } = await admin
         .from('charts')
         .select('id', { count: 'exact', head: true })
-        .eq('dashboard_id', existing.id)
+        .eq('dashboard_id', existing.dashboard.id)
 
-      await insertAiCharts(admin, existing.id, user.id, payload, count ?? 0)
-      const charts = await fetchCharts(admin, existing.id)
+      await insertAiCharts(admin, existing.dashboard.id, user.id, payload, count ?? 0)
+      const charts = await fetchCharts(admin, existing.dashboard.id)
 
-      return NextResponse.json({
-        dashboard,
-        charts,
-        rows: rows.slice(0, MAX_CLIENT_ROWS),
-      })
-    }
-
-    if (existing) {
-      const charts = await fetchCharts(admin, existing.id)
-      return NextResponse.json({
-        dashboard: existing,
-        charts,
-        rows: rows.slice(0, MAX_CLIENT_ROWS),
-      })
+      return NextResponse.json({ dashboard, charts, columns: existing.columns })
     }
 
     const payload = await generateAiPayload(schema, rows)
@@ -156,7 +135,7 @@ export async function POST(request: Request) {
     const { data: dashboard, error: dashError } = await admin
       .from('dashboards')
       .insert({
-        dataset_id: dataset.id,
+        dataset_id: existing.dataset.id,
         user_id: user.id,
         title: payload.title,
         ai_summary: payload.ai_summary,
@@ -175,7 +154,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       dashboard,
       charts,
-      rows: rows.slice(0, MAX_CLIENT_ROWS),
+      columns: existing.columns.length ? existing.columns : schema.columns.map((c) => c.name),
     })
   } catch (err) {
     console.error('Dashboard generate error:', err)

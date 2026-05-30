@@ -1,13 +1,21 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { AISummaryCard } from '@/components/dashboard/AISummaryCard'
 import { InsightCards } from '@/components/dashboard/InsightCards'
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { AddChartModal } from '@/components/dashboard/AddChartModal'
+import { CompareModal } from '@/components/dashboard/CompareModal'
+import { StoryModal } from '@/components/dashboard/StoryModal'
 import { ChatPanel } from '@/components/chat/ChatPanel'
+import { exportDashboardPdf } from '@/lib/dashboard/export-pdf'
+import {
+  clearDashboardCache,
+  readDashboardCache,
+  writeDashboardCache,
+} from '@/lib/dashboard/dashboard-cache'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Card } from '@/components/ui/Card'
 import type { Insight } from '@/types/dashboard'
@@ -19,86 +27,212 @@ type ApiDashboard = {
   ai_insights: Insight[]
 }
 
-async function loadDashboard(datasetId: string, regenerate = false) {
-  const res = await fetch('/api/dashboard/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ datasetId, regenerate }),
-  })
+async function fetchChartData(datasetId: string) {
+  const res = await fetch(`/api/dashboard/${datasetId}/chart-data`)
   const data = (await res.json()) as {
+    chartData?: Record<string, Array<Record<string, string | number>>>
+    columns?: string[]
     error?: string
-    dashboard?: ApiDashboard
-    charts?: ChartItem[]
-    rows?: Array<Record<string, unknown>>
   }
-  if (!res.ok) throw new Error(data.error || 'Failed to load dashboard')
+  if (!res.ok) throw new Error(data.error || 'Failed to load chart data')
   return data
 }
 
 export function DashboardView() {
   const params = useParams()
   const datasetId = typeof params.id === 'string' ? params.id : ''
+  const exportRef = useRef<HTMLDivElement>(null)
 
-  const [loading, setLoading] = useState(true)
+  const [shellLoading, setShellLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [chartsLoading, setChartsLoading] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dashboard, setDashboard] = useState<ApiDashboard | null>(null)
   const [charts, setCharts] = useState<ChartItem[]>([])
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
+  const [columns, setColumns] = useState<string[]>([])
+  const [chartData, setChartData] = useState<
+    Record<string, Array<Record<string, string | number>>>
+  >({})
   const [modalOpen, setModalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [compareOpen, setCompareOpen] = useState(false)
+  const [storyOpen, setStoryOpen] = useState(false)
 
-  const columns = useMemo(() => {
-    if (!rows.length) return []
-    return Object.keys(rows[0])
-  }, [rows])
+  const loadChartData = useCallback(
+    async (
+      id: string,
+      cachePayload?: {
+        dashboard: ApiDashboard
+        charts: ChartItem[]
+        columns: string[]
+      }
+    ) => {
+      setChartsLoading(true)
+      try {
+        const data = await fetchChartData(id)
+        setChartData(data.chartData ?? {})
+        const cols = data.columns ?? cachePayload?.columns ?? []
+        if (data.columns?.length) setColumns(data.columns)
 
-  const fetchDashboard = useCallback(
-    async (regenerate = false) => {
-      if (!datasetId) return
-      const data = await loadDashboard(datasetId, regenerate)
-      setDashboard(data.dashboard ?? null)
-      setCharts(data.charts ?? [])
-      setRows(data.rows ?? [])
+        if (cachePayload) {
+          writeDashboardCache(id, {
+            ...cachePayload,
+            columns: cols,
+            chartData: data.chartData ?? {},
+          })
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load charts.')
+      } finally {
+        setChartsLoading(false)
+      }
     },
-    [datasetId]
+    []
+  )
+
+  const runGenerate = useCallback(
+    async (id: string, regenerate = false) => {
+      const res = await fetch('/api/dashboard/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ datasetId: id, regenerate }),
+      })
+      const data = (await res.json()) as {
+        error?: string
+        dashboard?: ApiDashboard
+        charts?: ChartItem[]
+        columns?: string[]
+      }
+      if (!res.ok) throw new Error(data.error || 'Generation failed')
+
+      const nextDashboard = data.dashboard!
+      const nextCharts = data.charts ?? []
+      const nextColumns = data.columns ?? []
+
+      setDashboard(nextDashboard)
+      setCharts(nextCharts)
+      setColumns(nextColumns)
+      clearDashboardCache(id)
+
+      await loadChartData(id, {
+        dashboard: nextDashboard,
+        charts: nextCharts,
+        columns: nextColumns,
+      })
+    },
+    [loadChartData]
   )
 
   useEffect(() => {
     if (!datasetId) {
-      setLoading(false)
+      setShellLoading(false)
       setError('Invalid dashboard link.')
       return
     }
 
     let cancelled = false
-    ;(async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        await fetchDashboard(false)
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Something went wrong.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
 
+    async function init() {
+      setError(null)
+
+      const cached = readDashboardCache(datasetId)
+      if (cached) {
+        setDashboard(cached.dashboard)
+        setCharts(cached.charts)
+        setColumns(cached.columns)
+        setChartData(cached.chartData)
+        setShellLoading(false)
+      } else {
+        setShellLoading(true)
+      }
+
+      try {
+        const res = await fetch(`/api/dashboard/${datasetId}`)
+        const data = (await res.json()) as {
+          exists?: boolean
+          dashboard?: ApiDashboard
+          charts?: ChartItem[]
+          columns?: string[]
+          error?: string
+        }
+
+        if (!res.ok) throw new Error(data.error || 'Failed to load dashboard')
+        if (cancelled) return
+
+        if (!data.exists) {
+          setGenerating(true)
+          setShellLoading(false)
+          await runGenerate(datasetId, false)
+          if (!cancelled) setGenerating(false)
+          return
+        }
+
+        const nextDashboard = data.dashboard!
+        const nextCharts = data.charts ?? []
+        const nextColumns = data.columns ?? []
+
+        setDashboard(nextDashboard)
+        setCharts(nextCharts)
+        setColumns(nextColumns)
+        setShellLoading(false)
+
+        const hasCachedCharts = cached?.chartData && Object.keys(cached.chartData).length > 0
+
+        if (!hasCachedCharts) {
+          await loadChartData(datasetId, {
+            dashboard: nextDashboard,
+            charts: nextCharts,
+            columns: nextColumns,
+          })
+        } else {
+          loadChartData(datasetId, {
+            dashboard: nextDashboard,
+            charts: nextCharts,
+            columns: nextColumns,
+          }).catch(() => {})
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Something went wrong.')
+          setShellLoading(false)
+          setGenerating(false)
+        }
+      }
+    }
+
+    init()
     return () => {
       cancelled = true
     }
-  }, [datasetId, fetchDashboard])
+  }, [datasetId, runGenerate, loadChartData])
 
   async function handleRegenerate() {
     if (!confirm('Regenerate AI charts? Manual charts will be kept.')) return
     setRegenerating(true)
     setError(null)
     try {
-      await fetchDashboard(true)
+      clearDashboardCache(datasetId)
+      await runGenerate(datasetId, true)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Regeneration failed.')
     } finally {
       setRegenerating(false)
+    }
+  }
+
+  async function handleExport() {
+    if (!exportRef.current || !dashboard) return
+    setExporting(true)
+    setError(null)
+    try {
+      const safeName = dashboard.title.replace(/[^\w\-]+/g, '-').slice(0, 40)
+      await exportDashboardPdf(exportRef.current, `${safeName || 'dashboard'}.pdf`)
+    } catch {
+      setError('Export failed. Please try again.')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -108,7 +242,12 @@ export function DashboardView() {
       setError('Failed to delete chart.')
       return
     }
-    setCharts((prev) => prev.filter((c) => c.id !== chartId))
+    const nextCharts = charts.filter((c) => c.id !== chartId)
+    setCharts(nextCharts)
+    clearDashboardCache(datasetId)
+    if (dashboard) {
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+    }
   }
 
   async function handleTitleChange(chartId: string, title: string) {
@@ -124,14 +263,25 @@ export function DashboardView() {
     setCharts((prev) => prev.map((c) => (c.id === chartId ? { ...c, title } : c)))
   }
 
-  if (loading) {
+  async function handleChartCreated(chart: ChartItem) {
+    const nextCharts = [...charts, chart]
+    setCharts(nextCharts)
+    clearDashboardCache(datasetId)
+    if (dashboard) {
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+    }
+  }
+
+  if (shellLoading || generating) {
     return (
       <div className="p-6 max-w-6xl mx-auto flex flex-col gap-6">
         <Card className="p-6 flex flex-col gap-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
-          <p className="text-sm text-text-secondary pt-2">Prism is reading your data…</p>
+          <p className="text-sm text-text-secondary pt-2">
+            {generating ? 'Prism is reading your data…' : 'Loading dashboard…'}
+          </p>
         </Card>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-80" />
@@ -155,9 +305,13 @@ export function DashboardView() {
     <div className="p-6 max-w-6xl mx-auto flex flex-col gap-6">
       <DashboardHeader
         onAskAi={() => setChatOpen(true)}
+        onCompare={() => setCompareOpen(true)}
+        onStory={() => setStoryOpen(true)}
+        onExport={handleExport}
         onAddChart={() => setModalOpen(true)}
         onRegenerate={handleRegenerate}
         regenerating={regenerating}
+        exporting={exporting}
       />
 
       {error ? (
@@ -166,21 +320,36 @@ export function DashboardView() {
         </Card>
       ) : null}
 
-      <AISummaryCard title={dashboard.title} summary={dashboard.ai_summary} />
-      <InsightCards insights={dashboard.ai_insights} />
-      <ChartGrid
-        charts={charts}
-        rows={rows}
-        onDelete={handleDelete}
-        onTitleChange={handleTitleChange}
-      />
+      <div ref={exportRef} className="flex flex-col gap-6 bg-background">
+        <AISummaryCard title={dashboard.title} summary={dashboard.ai_summary} />
+        <InsightCards insights={dashboard.ai_insights} />
+        <ChartGrid
+          charts={charts}
+          chartData={chartData}
+          chartsLoading={chartsLoading}
+          onDelete={handleDelete}
+          onTitleChange={handleTitleChange}
+        />
+      </div>
 
       <AddChartModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         datasetId={datasetId}
         columns={columns}
-        onCreated={(chart) => setCharts((prev) => [...prev, chart])}
+        onCreated={handleChartCreated}
+      />
+
+      <CompareModal
+        isOpen={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        currentDatasetId={datasetId}
+      />
+
+      <StoryModal
+        isOpen={storyOpen}
+        onClose={() => setStoryOpen(false)}
+        dashboardId={dashboard.id}
       />
 
       <ChatPanel
