@@ -1,16 +1,90 @@
 import ai from '@/lib/gemini'
+import {
+  fallbackModel,
+  isPremiumModel,
+  modelForFeature,
+  type GeminiFeature,
+} from '@/lib/gemini-models'
+import { isPremiumQuotaExceeded, logAiUsage } from '@/lib/gemini-quota'
 
-export async function generateText(prompt: string, model = 'gemini-2.5-flash') {
+export type GenerateResult = {
+  text: string
+  modelUsed: string
+  usedFallback: boolean
+  notice?: string
+}
+
+type GenerateOptions = {
+  feature: GeminiFeature
+  json?: boolean
+  userId?: string
+  maxRetries?: number
+}
+
+const JSON_RETRY_SUFFIX =
+  '\n\nYour last response was not valid JSON. Return ONLY valid JSON. No markdown fences. No preamble.'
+
+async function callGemini(prompt: string, model: string, json: boolean) {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error('Missing GEMINI_API_KEY')
   }
 
-  const response = await ai.models.generateContent({
+  return ai.models.generateContent({
     model,
     contents: prompt,
+    config: {
+      temperature: 0,
+      ...(json ? { responseMimeType: 'application/json' as const } : {}),
+    },
   })
+}
 
-  return (response.text ?? '').trim()
+export async function generateText(
+  prompt: string,
+  options: GenerateOptions
+): Promise<GenerateResult> {
+  const primary = modelForFeature(options.feature)
+  let model = primary
+  let usedFallback = false
+  let notice: string | undefined
+
+  if (isPremiumModel(primary) && options.userId && (await isPremiumQuotaExceeded(options.userId))) {
+    model = fallbackModel(primary)
+    usedFallback = true
+    notice = 'Premium model quota reached — using faster model for this request.'
+  }
+
+  const maxRetries = options.maxRetries ?? 2
+  let lastError: Error | null = null
+  let attemptPrompt = prompt
+
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      const response = await callGemini(attemptPrompt, model, options.json ?? false)
+      const text = (response.text ?? '').trim()
+
+      await logAiUsage({ userId: options.userId, model, feature: options.feature })
+
+      return { text, modelUsed: model, usedFallback, notice }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+
+      // Retry premium failures on lite model once
+      if (!usedFallback && isPremiumModel(model) && i === 0) {
+        model = fallbackModel(model)
+        usedFallback = true
+        notice = 'Premium model unavailable — using faster model.'
+        continue
+      }
+
+      if (options.json && i < maxRetries) {
+        attemptPrompt = prompt + JSON_RETRY_SUFFIX
+        continue
+      }
+    }
+  }
+
+  throw lastError ?? new Error('AI request failed')
 }
 
 export function parseJsonArray(text: string): unknown[] | null {
@@ -71,4 +145,24 @@ export function parseJsonObject(text: string): Record<string, unknown> | null {
   }
 
   return null
+}
+
+export async function generateJsonObject(
+  prompt: string,
+  options: GenerateOptions
+): Promise<{ data: Record<string, unknown>; meta: GenerateResult }> {
+  const result = await generateText(prompt, { ...options, json: true })
+  const data = parseJsonObject(result.text)
+  if (!data) throw new Error('AI returned invalid JSON')
+  return { data, meta: result }
+}
+
+export async function generateJsonArray(
+  prompt: string,
+  options: GenerateOptions
+): Promise<{ data: unknown[]; meta: GenerateResult }> {
+  const result = await generateText(prompt, { ...options, json: true })
+  const data = parseJsonArray(result.text)
+  if (!data) throw new Error('AI returned invalid JSON')
+  return { data, meta: result }
 }

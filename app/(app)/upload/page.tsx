@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { DropZone } from '@/components/upload/DropZone'
 import { UploadCard } from '@/components/upload/UploadCard'
+
 type Status = 'idle' | 'uploading' | 'parsing' | 'done' | 'error'
 
 function safeFileExt(name: string) {
@@ -82,39 +82,38 @@ export default function UploadPage() {
 
     const data = (await res.json()) as { uploadId: string }
     setStatus('done')
-    setDetails('Schema extracted. Next: health scan.')
+    setDetails('Schema extracted. Starting health check…')
 
-    // Phase 3 will use this.
     router.push(`/health/${data.uploadId}`)
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold mb-1">New upload</h2>
-          <p className="text-text-secondary">
-            Upload a CSV or Excel file. Prism will extract a schema and begin the health check.
-          </p>
-        </div>
+    <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8">
+      <header>
+        <h1 className="text-[32px] font-semibold text-primary tracking-tight mb-2">Upload Data</h1>
+        <p className="text-text-secondary text-base max-w-2xl">
+          Expand your analysis by importing new source files into your project workspace.
+        </p>
+      </header>
+
+      <DropZone
+        disabled={status === 'uploading' || status === 'parsing'}
+        onFile={handleFile}
+      />
+
+      {(filename || status !== 'idle') && (
+        <UploadCard filename={filename} status={status} details={details} />
+      )}
+
+      <div className="flex justify-start">
         <Button
           variant="secondary"
           onClick={() => router.push('/home')}
           disabled={status === 'uploading' || status === 'parsing'}
         >
-          Back
+          Back to dashboards
         </Button>
       </div>
-
-      <Card className="p-6 flex flex-col gap-4">
-        <DropZone
-          disabled={status === 'uploading' || status === 'parsing'}
-          onFile={handleFile}
-        />
-      </Card>
-
-      <UploadCard filename={filename} status={status} details={details} />
     </div>
   )
 }
-

@@ -3,11 +3,11 @@
 function MiniChartPreview() {
   const bars = [40, 65, 50, 80, 55, 70, 45]
   return (
-    <div className="h-20 rounded-[10px] bg-surface border border-border-subtle p-3 flex items-end gap-1">
+    <div className="h-24 bg-surface-container-low p-4 flex items-end gap-1">
       {bars.map((h, i) => (
         <div
           key={i}
-          className="flex-1 rounded-sm bg-accent/70"
+          className="flex-1 rounded-t-sm bg-primary/15 group-hover:bg-primary/25 transition-colors"
           style={{ height: `${h}%` }}
         />
       ))}
@@ -17,9 +17,9 @@ function MiniChartPreview() {
 
 export function DashboardPreviewCard({ title }: { title: string }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col">
       <MiniChartPreview />
-      <div className="text-xs text-text-tertiary truncate">{title}</div>
+      <span className="sr-only">{title}</span>
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import ai from '@/lib/gemini'
+import { modelForFeature } from '@/lib/gemini-models'
+import { logAiUsage } from '@/lib/gemini-quota'
 import { createClient as createUserClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
@@ -28,9 +30,15 @@ async function loadDashboardContext(admin: ReturnType<typeof createAdminClient>,
 
   const { data: dataset } = await admin
     .from('datasets')
-    .select('cleaned_data, raw_schema')
+    .select('upload_id, cleaned_data, raw_schema')
     .eq('id', dashboard.dataset_id)
     .eq('user_id', userId)
+    .single()
+
+  const { data: upload } = await admin
+    .from('uploads')
+    .select('computed_stats')
+    .eq('id', dataset?.upload_id)
     .single()
 
   const rows = (dataset?.cleaned_data as Array<Record<string, unknown>>) ?? []
@@ -42,6 +50,7 @@ async function loadDashboardContext(admin: ReturnType<typeof createAdminClient>,
     dashboard,
     schema,
     sampleData: rows.slice(0, MAX_SAMPLE_ROWS),
+    computedStats: upload?.computed_stats,
   }
 }
 
@@ -139,22 +148,27 @@ export async function POST(request: Request) {
       .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
       .join('\n\n')
 
-    const prompt = `You are a data analyst assistant. The user has uploaded a dataset and is asking questions about it.
+    const prompt = `You are a data analyst assistant. Answer questions about this dataset accurately.
+Dataset stats (computed from full dataset — these are exact values, not estimates):
+${JSON.stringify(ctx.computedStats, null, 2)}
 
 Dataset schema: ${JSON.stringify(ctx.schema)}
-Sample data (up to 100 rows): ${JSON.stringify(ctx.sampleData)}
 Dashboard insights already shown: ${ctx.dashboard.ai_summary}
 
-Answer the user's question clearly and concisely. If the question implies a chart, describe what chart would show that. Use plain language — the user may not be technical. Never make up data not in the dataset.
+Answer concisely. If asked for averages or totals use the exact values above.
+If the question implies a chart, describe what chart would show that. Use plain language — the user may not be technical. Never make up numbers not present in the stats.
 
 Conversation so far:
 ${historyText}
 
 Respond to the latest user message only.`
 
+    const chatModel = modelForFeature('chat')
+
     const stream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: chatModel,
       contents: prompt,
+      config: { temperature: 0.3 },
     })
 
     const encoder = new TextEncoder()
@@ -176,6 +190,8 @@ Respond to the latest user message only.`
             content: fullReply.trim() || 'I could not generate a response.',
             timestamp: new Date().toISOString(),
           }
+
+          await logAiUsage({ userId: user.id, model: chatModel, feature: 'chat' })
 
           await admin
             .from('conversations')

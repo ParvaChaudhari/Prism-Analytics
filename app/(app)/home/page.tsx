@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
 import { DashboardPreviewCard } from '@/components/dashboard/DashboardPreviewCard'
 import { createClient } from '@/lib/supabase/server'
 
@@ -39,36 +40,41 @@ export default async function HomePage() {
     .order('created_at', { ascending: false })
     .limit(12)
 
-  const items = (dashboards ?? []) as DashboardRow[]
+  const items = (dashboards ?? []) as unknown as DashboardRow[]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold mb-1">Dashboards</h2>
+          <h1 className="text-[32px] font-semibold text-primary tracking-tight mb-2">Dashboards</h1>
           <p className="text-text-secondary">
-            {user?.email ? `Welcome back, ${user.email}` : 'Welcome back'}
+            {user?.email ? `Welcome back — ${user.email}` : 'Your AI-generated analytics at a glance.'}
           </p>
         </div>
         <Link href="/upload">
-          <Button>New upload</Button>
+          <Button className="gap-2">
+            <Icon name="upload" size={18} />
+            New upload
+          </Button>
         </Link>
       </div>
 
       {items.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((d) => {
             const filename = d.datasets?.uploads?.original_filename ?? 'Dataset'
             const rowCount = d.datasets?.row_count ?? 0
             return (
-              <Link key={d.id} href={`/dashboard/${d.dataset_id}`}>
-                <Card className="p-4 hover:bg-surface transition-colors flex flex-col gap-3 h-full">
+              <Link key={d.id} href={`/dashboard/${d.dataset_id}`} className="group">
+                <Card className="p-0 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
                   <DashboardPreviewCard title={d.title || filename} />
-                  <div>
-                    <h3 className="font-semibold truncate">{d.title || 'Untitled dashboard'}</h3>
-                    <p className="text-sm text-text-secondary truncate mt-0.5">{filename}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="default">{rowCount.toLocaleString()} rows</Badge>
+                  <div className="p-5 flex flex-col gap-2 flex-1">
+                    <h3 className="font-semibold text-primary truncate group-hover:text-secondary transition-colors">
+                      {d.title || 'Untitled dashboard'}
+                    </h3>
+                    <p className="text-sm text-text-secondary truncate">{filename}</p>
+                    <div className="flex items-center gap-2 mt-auto pt-2">
+                      <Badge variant="secondary">{rowCount.toLocaleString()} rows</Badge>
                       <span className="text-xs text-text-tertiary">
                         {new Date(d.created_at).toLocaleDateString()}
                       </span>
@@ -80,10 +86,18 @@ export default async function HomePage() {
           })}
         </div>
       ) : (
-        <Card className="p-8 text-center flex flex-col gap-4 items-center">
-          <p className="text-text-secondary">Upload a dataset to generate your first dashboard.</p>
+        <Card className="p-12 text-center flex flex-col gap-5 items-center">
+          <div className="w-14 h-14 rounded-xl ai-gradient flex items-center justify-center">
+            <Icon name="auto_awesome" size={28} className="text-white" filled />
+          </div>
+          <p className="text-text-secondary max-w-md">
+            Upload a dataset to generate your first interactive dashboard with AI insights.
+          </p>
           <Link href="/upload">
-            <Button>Upload data</Button>
+            <Button className="gap-2">
+              <Icon name="upload" size={18} />
+              Upload data
+            </Button>
           </Link>
         </Card>
       )}

@@ -1,74 +1,95 @@
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
+import { Icon } from '@/components/ui/Icon'
 import Link from 'next/link'
-import { ArrowRight, BarChart3, Wand2, FileSpreadsheet } from 'lucide-react'
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="h-16 border-b border-border-subtle flex items-center justify-between px-6 max-w-7xl w-full mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center font-bold">P</div>
-          <span className="font-semibold text-lg tracking-tight">Prism</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm font-medium text-text-secondary hover:text-text-primary">Log in</Link>
-          <Link href="/signup">
-            <Button size="sm">Get Started</Button>
-          </Link>
+      <header className="glass-nav sticky top-0 z-40">
+        <div className="page-container flex h-16 items-center justify-between max-w-[var(--container-max)]">
+          <span className="text-xl font-bold text-primary tracking-tight">Prism</span>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-text-secondary hover:text-primary transition-colors"
+            >
+              Log in
+            </Link>
+            <Link href="/signup">
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="flex-1">
-        <section className="py-24 px-6 text-center max-w-4xl mx-auto">
-          <Badge variant="success" className="mb-6">v1.0 is here</Badge>
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6">
-            Your data, <br/>
-            <span className="text-accent">beautifully clear.</span>
+        <section className="py-20 md:py-28 page-container text-center max-w-4xl mx-auto">
+          <Badge variant="ai" className="mb-6 normal-case tracking-normal">
+            AI-Powered Analytics
+          </Badge>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 text-primary">
+            Your data,{' '}
+            <span className="ai-gradient-text">beautifully clear.</span>
           </h1>
-          <p className="text-xl text-text-secondary mb-10 max-w-2xl mx-auto">
-            Upload any CSV or Excel file. Our AI cleans your data, analyzes it, and generates a stunning interactive dashboard in seconds.
+          <p className="text-lg md:text-xl text-text-secondary mb-10 max-w-2xl mx-auto">
+            Upload any CSV or Excel file. Prism cleans your data, analyzes it, and generates an
+            interactive dashboard in seconds.
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/signup">
-              <Button size="lg" className="gap-2">
-                Start for free <ArrowRight size={18} />
+              <Button size="lg" className="gap-2 w-full sm:w-auto">
+                Start for free
+                <Icon name="arrow_forward" size={18} />
               </Button>
             </Link>
-            <Link href="/demo">
-              <Button size="lg" variant="secondary">View Demo</Button>
+            <Link href="/login">
+              <Button size="lg" variant="secondary" className="w-full sm:w-auto">
+                View demo
+              </Button>
             </Link>
           </div>
         </section>
 
-        <section className="py-24 px-6 bg-surface">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-[18px] bg-surface-elevated border border-border-subtle">
-              <div className="w-12 h-12 rounded-xl bg-accent-light text-accent flex items-center justify-center mb-6">
-                <FileSpreadsheet size={24} />
+        <section className="py-20 page-container max-w-[var(--container-max)] mx-auto">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="glass-card rounded-xl p-8">
+              <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center mb-6">
+                <Icon name="upload_file" size={24} />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Instant Upload</h3>
-              <p className="text-text-secondary">Drag and drop your messy CSVs. We handle the parsing, typing, and schema extraction automatically.</p>
-            </div>
-            
-            <div className="p-6 rounded-[18px] bg-surface-elevated border border-border-subtle">
-              <div className="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center mb-6">
-                <Wand2 size={24} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI Data Cleaning</h3>
-              <p className="text-text-secondary">Our AI identifies null values, outliers, and duplicates, walking you through a simple health check.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">Instant Upload</h3>
+              <p className="text-text-secondary text-sm leading-relaxed">
+                Drag and drop messy CSVs. Prism handles parsing, typing, and schema extraction
+                automatically.
+              </p>
             </div>
 
-            <div className="p-6 rounded-[18px] bg-surface-elevated border border-border-subtle">
-              <div className="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center mb-6">
-                <BarChart3 size={24} />
+            <div className="glass-card rounded-xl p-8">
+              <div className="w-12 h-12 rounded-xl ai-gradient flex items-center justify-center mb-6">
+                <Icon name="auto_awesome" size={24} className="text-white" filled />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Auto Dashboards</h3>
-              <p className="text-text-secondary">Get a complete, interactive dashboard with AI-generated insights and charts tailored to your data.</p>
+              <h3 className="text-xl font-semibold mb-2 text-primary">AI Data Cleaning</h3>
+              <p className="text-text-secondary text-sm leading-relaxed">
+                Identify null values, outliers, and duplicates through a guided health checkup.
+              </p>
+            </div>
+
+            <div className="glass-card rounded-xl p-8">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-6">
+                <Icon name="bar_chart" size={24} />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-primary">Auto Dashboards</h3>
+              <p className="text-text-secondary text-sm leading-relaxed">
+                Get interactive charts and AI-generated insights tailored to your dataset.
+              </p>
             </div>
           </div>
         </section>
       </main>
+
+      <footer className="py-8 text-center text-[10px] uppercase tracking-widest text-text-tertiary border-t border-border-subtle">
+        © {new Date().getFullYear()} Prism Analytics
+      </footer>
     </div>
   )
 }

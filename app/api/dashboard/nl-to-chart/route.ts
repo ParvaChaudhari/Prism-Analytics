@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createUserClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateText, parseJsonObject } from '@/lib/gemini-generate'
+import { generateJsonObject } from '@/lib/gemini-generate'
 import { getDashboardForDataset } from '@/lib/dashboard/get-dashboard'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import type { ChartType, GeneratedChart } from '@/types/dashboard'
@@ -80,8 +80,12 @@ Return a single JSON object with:
 Use only column names from the available columns list.
 Return ONLY valid JSON. No markdown.`
 
-    const text = await generateText(prompt)
-    const parsed = parseJsonObject(text)
+    const { data, meta } = await generateJsonObject(prompt, {
+      feature: 'nl_to_chart',
+      json: true,
+      userId: user.id,
+    })
+    const parsed = data
     if (!parsed) {
       return NextResponse.json({ error: 'AI could not parse that request' }, { status: 400 })
     }
@@ -91,7 +95,7 @@ Return ONLY valid JSON. No markdown.`
       return NextResponse.json({ error: 'Invalid chart configuration from AI' }, { status: 400 })
     }
 
-    return NextResponse.json({ chart })
+    return NextResponse.json({ chart, aiNotice: meta.notice })
   } catch (err) {
     console.error('nl-to-chart error:', err)
     return NextResponse.json({ error: 'Failed to parse chart request' }, { status: 500 })

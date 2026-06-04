@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createUserClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { generateText, parseJsonArray } from '@/lib/gemini-generate'
+import { generateJsonArray } from '@/lib/gemini-generate'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import type { Insight } from '@/types/dashboard'
 
@@ -85,8 +85,12 @@ Return ONLY a JSON array of objects with:
 
 Return 4-8 insights. No markdown, no preamble.`
 
-    const text = await generateText(prompt)
-    let insights: Insight[] = (parseJsonArray(text) as Insight[]) ?? []
+    const { data, meta } = await generateJsonArray(prompt, {
+      feature: 'compare',
+      json: true,
+      userId: user.id,
+    })
+    let insights: Insight[] = (data as Insight[]) ?? []
 
     if (!insights.length) {
       insights = [
@@ -107,6 +111,7 @@ Return 4-8 insights. No markdown, no preamble.`
       datasetA: { id: a.id, name: a.name, rowCount: a.rowCount },
       datasetB: { id: b.id, name: b.name, rowCount: b.rowCount },
       insights,
+      aiNotice: meta.notice,
     })
   } catch (err) {
     console.error('Compare error:', err)

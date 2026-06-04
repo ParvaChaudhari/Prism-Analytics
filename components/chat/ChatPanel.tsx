@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { X, Send } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
 import { ChatMessage } from '@/components/chat/ChatMessage'
 import { STARTER_QUESTIONS, type ChatMessage as ChatMessageType } from '@/types/chat'
 
@@ -125,35 +125,39 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 md:hidden"
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
         onClick={onClose}
         aria-hidden
       />
 
       <aside
         className={[
-          'fixed z-50 flex flex-col bg-surface-elevated border-border-subtle shadow-xl',
-          'inset-x-0 bottom-0 h-[70vh] rounded-t-[18px] border-t',
-          'md:inset-y-0 md:right-0 md:left-auto md:w-[400px] md:h-full md:rounded-none md:border-l md:border-t-0',
-          'animate-in slide-in-from-bottom md:slide-in-from-right duration-300',
+          'fixed z-50 flex flex-col glass-nav shadow-xl',
+          'inset-x-0 bottom-0 h-[75vh] rounded-t-xl border-t border-border-subtle',
+          'lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[400px] lg:h-full lg:rounded-none lg:border-l lg:border-t-0',
         ].join(' ')}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-          <div>
-            <h2 className="font-semibold text-lg">Ask AI</h2>
-            <p className="text-xs text-text-secondary">Questions about your data</p>
+        <div className="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-container-low/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl ai-gradient flex items-center justify-center">
+              <Icon name="auto_awesome" size={22} className="text-white" filled />
+            </div>
+            <div>
+              <h3 className="font-bold text-primary">Prism Intelligence</h3>
+              <p className="text-xs text-text-secondary">Ask about your dashboard data</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-surface text-text-secondary"
+            className="text-text-secondary hover:text-primary transition-colors p-1"
             aria-label="Close chat"
           >
-            <X size={20} />
+            <Icon name="close" size={24} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
           {messages.length === 0 && !streaming ? (
             <div className="text-sm text-text-secondary text-center py-8">
               Ask anything about your dataset. Prism answers from your uploaded data only.
@@ -162,8 +166,9 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
 
           {messages.map((msg, idx) =>
             msg.role === 'assistant' && !msg.content && streaming && idx === messages.length - 1 ? (
-              <div key={idx} className="text-sm text-text-tertiary px-2">
-                ✦ AI is thinking…
+              <div key={idx} className="flex items-center gap-2 text-sm text-ai-accent px-2">
+                <Icon name="auto_awesome" size={16} filled />
+                AI is thinking…
               </div>
             ) : msg.content ? (
               <ChatMessage key={`${msg.timestamp}-${idx}`} message={msg} />
@@ -173,13 +178,13 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
         </div>
 
         {messages.length === 0 && !streaming ? (
-          <div className="px-4 pb-2 flex flex-wrap gap-2">
+          <div className="px-5 pb-2 flex flex-wrap gap-2">
             {STARTER_QUESTIONS.map((q) => (
               <button
                 key={q}
                 type="button"
                 onClick={() => sendMessage(q)}
-                className="text-xs px-3 py-1.5 rounded-full bg-surface border border-border-subtle hover:border-accent hover:text-accent transition-colors text-left"
+                className="text-xs px-3 py-1.5 rounded-full bg-surface-container-low border border-border-subtle hover:border-secondary hover:text-secondary transition-colors text-left"
               >
                 {q}
               </button>
@@ -188,13 +193,13 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
         ) : null}
 
         {error ? (
-          <div className="mx-4 mb-2 text-sm text-destructive bg-destructive/10 rounded-[10px] px-3 py-2">
+          <div className="mx-5 mb-2 text-sm text-destructive bg-destructive/10 rounded-xl px-3 py-2">
             {error}
           </div>
         ) : null}
 
         <form
-          className="p-4 border-t border-border-subtle flex gap-2"
+          className="p-5 border-t border-border-subtle flex gap-2 bg-surface-container-low/30"
           onSubmit={(e) => {
             e.preventDefault()
             sendMessage(input)
@@ -205,10 +210,10 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about your data…"
             disabled={loading || streaming}
-            className="flex-1 h-10 rounded-[10px] border border-border-subtle bg-background px-3 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50"
+            className="flex-1 h-11 rounded-xl border border-border-subtle bg-surface-elevated px-4 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           />
-          <Button type="submit" size="sm" disabled={loading || streaming || !input.trim()}>
-            <Send size={16} />
+          <Button type="submit" size="sm" disabled={loading || streaming || !input.trim()} className="px-3">
+            <Icon name="send" size={18} />
           </Button>
         </form>
       </aside>

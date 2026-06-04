@@ -37,7 +37,7 @@ export function ChartCard({
   }
 
   return (
-    <Card className="p-5 flex flex-col gap-3 group relative">
+    <Card className="p-8 flex flex-col gap-4 group relative min-h-[320px]">
       {onDelete ? (
         <button
           type="button"
@@ -78,8 +78,8 @@ export function ChartCard({
               {title}
             </h3>
           )}
-          <Badge variant={isManual ? 'default' : 'success'}>
-            {isManual ? 'Manual' : '✦ AI'}
+          <Badge variant={isManual ? 'default' : 'ai'}>
+            {isManual ? 'Manual' : 'AI'}
           </Badge>
         </div>
         {description ? <p className="text-sm text-text-secondary">{description}</p> : null}

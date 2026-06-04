@@ -66,9 +66,9 @@ Write a markdown report with:
 
 Use only facts from the data provided. Do not invent numbers.`
 
-    const story = await generateText(prompt)
+    const result = await generateText(prompt, { feature: 'story', userId: user.id })
 
-    return NextResponse.json({ story })
+    return NextResponse.json({ story: result.text, aiNotice: result.notice })
   } catch (err) {
     console.error('Story error:', err)
     return NextResponse.json({ error: 'Failed to generate story' }, { status: 500 })

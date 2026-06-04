@@ -100,102 +100,102 @@ export function DashboardView() {
         body: JSON.stringify({ datasetId: id, regenerate }),
       })
       const data = (await res.json()) as {
-        error?: string
         dashboard?: ApiDashboard
         charts?: ChartItem[]
         columns?: string[]
+        error?: string
       }
       if (!res.ok) throw new Error(data.error || 'Generation failed')
-
-      const nextDashboard = data.dashboard!
-      const nextCharts = data.charts ?? []
-      const nextColumns = data.columns ?? []
-
-      setDashboard(nextDashboard)
-      setCharts(nextCharts)
-      setColumns(nextColumns)
-      clearDashboardCache(id)
-
+      if (!data.dashboard) throw new Error('No dashboard returned')
+      setDashboard(data.dashboard)
+      setCharts(data.charts ?? [])
+      if (data.columns?.length) setColumns(data.columns)
       await loadChartData(id, {
-        dashboard: nextDashboard,
-        charts: nextCharts,
-        columns: nextColumns,
+        dashboard: data.dashboard,
+        charts: data.charts ?? [],
+        columns: data.columns ?? [],
       })
     },
     [loadChartData]
   )
 
   useEffect(() => {
-    if (!datasetId) {
-      setShellLoading(false)
-      setError('Invalid dashboard link.')
-      return
-    }
+    if (!datasetId) return
 
     let cancelled = false
 
     async function init() {
+      setShellLoading(true)
       setError(null)
 
       const cached = readDashboardCache(datasetId)
-      if (cached) {
+      if (cached?.dashboard) {
         setDashboard(cached.dashboard)
-        setCharts(cached.charts)
-        setColumns(cached.columns)
-        setChartData(cached.chartData)
-        setShellLoading(false)
-      } else {
-        setShellLoading(true)
+        setCharts(cached.charts ?? [])
+        setColumns(cached.columns ?? [])
+        if (cached.chartData && Object.keys(cached.chartData).length) {
+          setChartData(cached.chartData)
+          setShellLoading(false)
+          loadChartData(datasetId, {
+            dashboard: cached.dashboard,
+            charts: cached.charts ?? [],
+            columns: cached.columns ?? [],
+          })
+          return
+        }
       }
 
       try {
         const res = await fetch(`/api/dashboard/${datasetId}`)
         const data = (await res.json()) as {
-          exists?: boolean
           dashboard?: ApiDashboard
           charts?: ChartItem[]
           columns?: string[]
           error?: string
         }
 
-        if (!res.ok) throw new Error(data.error || 'Failed to load dashboard')
-        if (cancelled) return
-
-        if (!data.exists) {
+        if (res.status === 404) {
+          if (cancelled) return
           setGenerating(true)
           setShellLoading(false)
-          await runGenerate(datasetId, false)
+          await runGenerate(datasetId)
           if (!cancelled) setGenerating(false)
           return
         }
 
-        const nextDashboard = data.dashboard!
-        const nextCharts = data.charts ?? []
-        const nextColumns = data.columns ?? []
+        if (!res.ok) throw new Error(data.error || 'Failed to load dashboard')
 
-        setDashboard(nextDashboard)
-        setCharts(nextCharts)
-        setColumns(nextColumns)
+        if (cancelled) return
+        if (!data.dashboard) throw new Error('Dashboard not found')
+
+        setDashboard(data.dashboard)
+        setCharts(data.charts ?? [])
+        if (data.columns?.length) setColumns(data.columns)
         setShellLoading(false)
-
-        const hasCachedCharts = cached?.chartData && Object.keys(cached.chartData).length > 0
-
-        if (!hasCachedCharts) {
-          await loadChartData(datasetId, {
-            dashboard: nextDashboard,
-            charts: nextCharts,
-            columns: nextColumns,
-          })
-        } else {
-          loadChartData(datasetId, {
-            dashboard: nextDashboard,
-            charts: nextCharts,
-            columns: nextColumns,
-          }).catch(() => {})
-        }
+        await loadChartData(datasetId, {
+          dashboard: data.dashboard,
+          charts: data.charts ?? [],
+          columns: data.columns ?? [],
+        })
       } catch (e) {
+        if (cancelled) return
+        const msg = e instanceof Error ? e.message : 'Failed to load dashboard.'
+        if (msg.includes('404') || msg.toLowerCase().includes('not found')) {
+          try {
+            setGenerating(true)
+            setShellLoading(false)
+            await runGenerate(datasetId)
+          } catch (genErr) {
+            setError(genErr instanceof Error ? genErr.message : msg)
+          } finally {
+            if (!cancelled) setGenerating(false)
+          }
+        } else {
+          setError(msg)
+          setShellLoading(false)
+        }
+      } finally {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Something went wrong.')
           setShellLoading(false)
           setGenerating(false)
         }
@@ -274,8 +274,13 @@ export function DashboardView() {
 
   if (shellLoading || generating) {
     return (
-      <div className="p-6 max-w-6xl mx-auto flex flex-col gap-6">
-        <Card className="p-6 flex flex-col gap-4">
+      <div
+        className={[
+          'page-container py-8 max-w-[var(--container-max)] flex flex-col gap-6 transition-[padding] duration-300',
+          chatOpen ? 'lg:pr-[420px]' : '',
+        ].join(' ')}
+      >
+        <Card className="p-8 flex flex-col gap-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-5/6" />
@@ -284,8 +289,8 @@ export function DashboardView() {
           </p>
         </Card>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
+          <Skeleton className="h-80 rounded-xl" />
+          <Skeleton className="h-80 rounded-xl" />
         </div>
       </div>
     )
@@ -293,7 +298,7 @@ export function DashboardView() {
 
   if (error && !dashboard) {
     return (
-      <div className="p-6 max-w-3xl mx-auto">
+      <div className="page-container py-8 max-w-[var(--container-max)]">
         <Card className="p-6 text-destructive">{error}</Card>
       </div>
     )
@@ -302,61 +307,69 @@ export function DashboardView() {
   if (!dashboard) return null
 
   return (
-    <div className="p-6 max-w-6xl mx-auto flex flex-col gap-6">
-      <DashboardHeader
-        onAskAi={() => setChatOpen(true)}
-        onCompare={() => setCompareOpen(true)}
-        onStory={() => setStoryOpen(true)}
-        onExport={handleExport}
-        onAddChart={() => setModalOpen(true)}
-        onRegenerate={handleRegenerate}
-        regenerating={regenerating}
-        exporting={exporting}
-      />
+    <>
+      <div
+        className={[
+          'page-container py-8 max-w-[var(--container-max)] flex flex-col gap-6 transition-[padding] duration-300',
+          chatOpen ? 'lg:pr-[420px]' : '',
+        ].join(' ')}
+      >
+        <DashboardHeader
+          title={dashboard.title}
+          onAskAi={() => setChatOpen(true)}
+          onCompare={() => setCompareOpen(true)}
+          onStory={() => setStoryOpen(true)}
+          onExport={handleExport}
+          onAddChart={() => setModalOpen(true)}
+          onRegenerate={handleRegenerate}
+          regenerating={regenerating}
+          exporting={exporting}
+        />
 
-      {error ? (
-        <Card className="p-4 text-sm text-destructive border border-destructive/20 bg-destructive/10">
-          {error}
-        </Card>
-      ) : null}
+        {error ? (
+          <Card className="p-4 text-sm text-destructive border border-destructive/20 bg-destructive/10">
+            {error}
+          </Card>
+        ) : null}
 
-      <div ref={exportRef} className="flex flex-col gap-6 bg-background">
-        <AISummaryCard title={dashboard.title} summary={dashboard.ai_summary} />
-        <InsightCards insights={dashboard.ai_insights} />
-        <ChartGrid
-          charts={charts}
-          chartData={chartData}
-          chartsLoading={chartsLoading}
-          onDelete={handleDelete}
-          onTitleChange={handleTitleChange}
+        <div ref={exportRef} className="flex flex-col gap-6">
+          <AISummaryCard title={dashboard.title} summary={dashboard.ai_summary} />
+          <InsightCards insights={dashboard.ai_insights} />
+          <ChartGrid
+            charts={charts}
+            chartData={chartData}
+            chartsLoading={chartsLoading}
+            onDelete={handleDelete}
+            onTitleChange={handleTitleChange}
+          />
+        </div>
+
+        <AddChartModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          datasetId={datasetId}
+          columns={columns}
+          onCreated={handleChartCreated}
+        />
+
+        <CompareModal
+          isOpen={compareOpen}
+          onClose={() => setCompareOpen(false)}
+          currentDatasetId={datasetId}
+        />
+
+        <StoryModal
+          isOpen={storyOpen}
+          onClose={() => setStoryOpen(false)}
+          dashboardId={dashboard.id}
         />
       </div>
-
-      <AddChartModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        datasetId={datasetId}
-        columns={columns}
-        onCreated={handleChartCreated}
-      />
-
-      <CompareModal
-        isOpen={compareOpen}
-        onClose={() => setCompareOpen(false)}
-        currentDatasetId={datasetId}
-      />
-
-      <StoryModal
-        isOpen={storyOpen}
-        onClose={() => setStoryOpen(false)}
-        dashboardId={dashboard.id}
-      />
 
       <ChatPanel
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         dashboardId={dashboard.id}
       />
-    </div>
+    </>
   )
 }
