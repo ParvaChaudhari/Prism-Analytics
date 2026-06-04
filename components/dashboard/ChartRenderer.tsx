@@ -25,6 +25,13 @@ import { formatStatValue } from '@/lib/dashboard/format-stat'
 
 const COLORS = ['#000000', '#005ab7', '#0372e4', '#8E2DE2', '#6E6E73', '#4A90E2']
 
+function formatTooltipValue(v: any) {
+  if (typeof v === 'number') {
+    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(v)
+  }
+  return String(v)
+}
+
 function seriesKeysFromData(data: Array<Record<string, string | number>>): string[] {
   if (!data.length) return ['value']
   const first = data[0]
@@ -73,7 +80,7 @@ export function ChartRenderer({
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip formatter={(v) => (typeof v === 'number' ? v.toLocaleString() : String(v))} />
+          <Tooltip formatter={formatTooltipValue} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
@@ -87,7 +94,7 @@ export function ChartRenderer({
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="x" type="number" />
           <YAxis dataKey="y" type="number" />
-          <Tooltip />
+          <Tooltip formatter={formatTooltipValue} />
           <Scatter data={data} fill="#005ab7" />
         </ScatterChart>
       </ResponsiveContainer>
@@ -104,7 +111,7 @@ export function ChartRenderer({
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
           <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip />
+          <Tooltip formatter={formatTooltipValue} />
           {isMulti ? <Legend /> : null}
           {keys.map((key, i) => (
             <Line
@@ -128,7 +135,7 @@ export function ChartRenderer({
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
           <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip />
+          <Tooltip formatter={formatTooltipValue} />
           {isMulti ? <Legend /> : null}
           {keys.map((key, i) => (
             <Area
@@ -159,7 +166,7 @@ export function ChartRenderer({
           height={60}
         />
         <YAxis tick={{ fontSize: 12 }} />
-        <Tooltip />
+        <Tooltip formatter={formatTooltipValue} />
         {isMulti ? <Legend /> : null}
         {keys.map((key, i) => (
           <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} />

@@ -19,23 +19,26 @@ export function InsightCards({ insights }: { insights: Insight[] }) {
   if (!insights.length) return null
 
   return (
-    <div className="flex overflow-x-auto gap-4 pb-2 hide-scrollbar">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-2">
       {insights.map((insight, idx) => {
         const config = configForType(insight.type)
         return (
           <div
             key={`${insight.title}-${idx}`}
-            className={`flex-none w-72 glass-card rounded-lg p-3 border-l-4 ${config.color}`}
+            className={`glass-card rounded-lg p-3 border-l-4 ${config.color} relative group cursor-default`}
           >
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2">
               <Icon name={config.icon} size={18} className={config.text} />
-              <span className="text-primary font-bold text-[11px] uppercase tracking-wider">
+              <span className="text-primary font-bold text-[11px] uppercase tracking-wider line-clamp-1">
                 {insight.title}
               </span>
             </div>
-            <p className="text-text-secondary text-[11px] leading-tight line-clamp-3">
-              {insight.description}
-            </p>
+            
+            <div className="absolute top-full left-0 mt-2 w-64 p-3 bg-surface-elevated border border-border-subtle rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+              <p className="text-text-secondary text-[11px] leading-tight">
+                {insight.description}
+              </p>
+            </div>
           </div>
         )
       })}
