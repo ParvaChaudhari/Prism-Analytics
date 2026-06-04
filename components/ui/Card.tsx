@@ -1,13 +1,15 @@
 import React from 'react'
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  glass?: boolean
+}
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', ...props }, ref) => {
+  ({ className = '', glass = true, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={`rounded-[18px] bg-surface-elevated border border-border-subtle shadow-[0_2px_20px_rgba(0,0,0,0.06)] ${className}`}
+        className={`rounded-xl ${glass ? 'glass-card' : 'bg-surface-elevated border border-border-subtle shadow-[0_4px_20px_rgba(0,0,0,0.04)]'} ${className}`}
         {...props}
       />
     )

@@ -1,0 +1,21 @@
+type Props = {
+  name: string
+  className?: string
+  filled?: boolean
+  size?: number
+}
+
+export function Icon({ name, className = '', filled, size = 24 }: Props) {
+  return (
+    <span
+      className={`material-symbols-outlined ${className}`}
+      style={{
+        fontSize: size,
+        fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0",
+      }}
+      aria-hidden
+    >
+      {name}
+    </span>
+  )
+}

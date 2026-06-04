@@ -9,12 +9,12 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
         className={[
           'max-w-[85%] rounded-[14px] px-4 py-2.5 text-[15px] leading-relaxed',
           isUser
-            ? 'bg-accent text-white'
-            : 'bg-surface border border-border-subtle text-text-primary',
+            ? 'bg-primary text-on-primary'
+            : 'glass-card border border-border-subtle text-text-primary',
         ].join(' ')}
       >
         {!isUser ? (
-          <div className="text-xs font-semibold text-text-tertiary mb-1">✦ AI</div>
+          <div className="text-xs font-semibold ai-gradient-text mb-1">Prism AI</div>
         ) : null}
         <p className="whitespace-pre-wrap">{message.content}</p>
       </div>

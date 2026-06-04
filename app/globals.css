@@ -1,43 +1,120 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FFFFFF;
-  --surface: #F5F5F7;
-  --surface-elevated: #FFFFFF;
-  --text-primary: #1D1D1F;
-  --text-secondary: #6E6E73;
-  --text-tertiary: #86868B;
-  --accent: #0071E3;
-  --accent-hover: #0077ED;
-  --accent-light: #E8F0FE;
-  --border: #D2D2D7;
-  --border-subtle: #E8E8ED;
-  --destructive: #FF3B30;
-  --success: #34C759;
-  --warning: #FF9500;
+  --background: #f9f9fb;
+  --surface: #f3f3f5;
+  --surface-elevated: #ffffff;
+  --surface-container: #eeeef0;
+  --surface-container-low: #f3f3f5;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --text-primary: #1a1c1d;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #7e7576;
+  --primary: #000000;
+  --on-primary: #ffffff;
+  --secondary: #005ab7;
+  --secondary-container: #0372e4;
+  --accent: #005ab7;
+  --accent-hover: #00458f;
+  --accent-light: #d7e2ff;
+  --ai-gradient-start: #4a90e2;
+  --ai-gradient-end: #b621fe;
+  --ai-accent: #8e2de2;
+  --border: #cfc4c5;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --destructive: #ba1a1a;
+  --success: #005ab7;
+  --warning: #ff9500;
+  --container-max: 1200px;
+  --margin-desktop: 40px;
+  --margin-mobile: 20px;
+  --gutter: 24px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-elevated: var(--surface-elevated);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-low: var(--surface-container-low);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-light: var(--accent-light);
+  --color-ai-accent: var(--ai-accent);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background-color: var(--background);
   color: var(--text-primary);
-  font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.glass-nav {
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ai-gradient {
+  background: linear-gradient(135deg, var(--ai-gradient-start) 0%, var(--ai-gradient-end) 100%);
+}
+
+.ai-gradient-text {
+  background: linear-gradient(135deg, var(--ai-gradient-start) 0%, var(--ai-gradient-end) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.upload-dashed {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%236E6E73' stroke-width='2' stroke-dasharray='8%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+  border-radius: 12px;
+}
+
+.upload-dashed:hover {
+  background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='12' ry='12' stroke='%23000000' stroke-width='2' stroke-dasharray='8%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  user-select: none;
+}
+
+.page-container {
+  max-width: var(--container-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--margin-mobile);
+  padding-right: var(--margin-mobile);
+}
+
+@media (min-width: 768px) {
+  .page-container {
+    padding-left: var(--margin-desktop);
+    padding-right: var(--margin-desktop);
+  }
 }

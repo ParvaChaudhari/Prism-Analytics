@@ -1,20 +1,22 @@
 import React from 'react'
 
 interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'success' | 'warning' | 'destructive'
+  variant?: 'default' | 'success' | 'warning' | 'destructive' | 'ai' | 'secondary'
 }
 
 export function Badge({ className = '', variant = 'default', ...props }: BadgeProps) {
   const variants = {
-    default: 'bg-surface text-text-secondary',
-    success: 'bg-success/10 text-success',
+    default: 'bg-surface-container text-text-secondary',
+    success: 'bg-secondary/10 text-secondary',
     warning: 'bg-warning/10 text-warning',
     destructive: 'bg-destructive/10 text-destructive',
+    ai: 'bg-ai-gradient-start/10 text-ai-accent uppercase tracking-wider text-[10px]',
+    secondary: 'bg-secondary-container/10 text-secondary',
   }
 
   return (
     <div
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${variants[variant]} ${className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${variants[variant]} ${className}`}
       {...props}
     />
   )

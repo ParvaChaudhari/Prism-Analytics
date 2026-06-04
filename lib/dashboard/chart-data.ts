@@ -3,13 +3,13 @@ import type { ChartConfig, ChartType } from '@/types/dashboard'
 function toNumber(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v
   if (typeof v === 'string') {
-    const n = Number(v.replace(/,/g, ''))
+    const n = Number(v.replace(/[,$%]/g, ''))
     return Number.isFinite(n) ? n : null
   }
   return null
 }
 
-function aggregate(nums: number[], mode: ChartConfig['aggregation']) {
+function aggregate(nums: number[], mode: ChartConfig['aggregation']): number {
   if (!nums.length) return 0
   switch (mode) {
     case 'avg':
@@ -26,19 +26,60 @@ function aggregate(nums: number[], mode: ChartConfig['aggregation']) {
   }
 }
 
+function excelSerialToISO(serial: number): string | null {
+  if (serial < 30000 || serial > 50000) return null
+  const date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10)
+}
+
+function normalizeDate(v: unknown): string | null {
+  if (typeof v === 'number') return excelSerialToISO(v)
+  if (typeof v !== 'string') return null
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString().slice(0, 10)
+}
+
+function bucketDate(isoDate: string, granularity: string): string {
+  if (granularity === 'monthly') return isoDate.slice(0, 7)
+  if (granularity === 'yearly') return isoDate.slice(0, 4)
+  if (granularity === 'weekly') {
+    const d = new Date(isoDate)
+    d.setDate(d.getDate() - d.getDay())
+    return d.toISOString().slice(0, 10)
+  }
+  return isoDate
+}
+
+function detectGranularity(keys: string[]): string {
+  if (keys.length <= 12) return 'monthly'
+  if (keys.length <= 52) return 'weekly'
+  if (keys.length > 366) return 'monthly'
+  return 'daily'
+}
+
+function isDateColumn(colName: string, rows: Array<Record<string, unknown>>): boolean {
+  const sample = rows.slice(0, 20).map((r) => r[colName])
+  const dateCount = sample.filter((v) => normalizeDate(v) !== null).length
+  return dateCount >= Math.floor(sample.length * 0.7)
+}
+
 export function buildChartSeries(
   rows: Array<Record<string, unknown>>,
   chartType: ChartType,
   config: ChartConfig
 ): Array<Record<string, string | number>> {
-  const { xAxis, yAxis, aggregation = 'sum' } = config
+  const { xAxis, yAxis, groupBy, aggregation = 'sum' } = config
+  const granularity =
+    config.granularity && config.granularity !== 'auto'
+      ? config.granularity
+      : undefined
 
   if (chartType === 'stat') {
+    if (aggregation === 'count') return [{ name: 'Count', value: rows.length }]
     if (yAxis) {
       const nums = rows.map((r) => toNumber(r[yAxis])).filter((n): n is number => n !== null)
-      const value =
-        aggregation === 'count' ? rows.length : aggregate(nums.length ? nums : [rows.length], aggregation)
-      return [{ name: yAxis, value }]
+      return [{ name: yAxis, value: aggregate(nums, aggregation) }]
     }
     return [{ name: 'Rows', value: rows.length }]
   }
@@ -56,6 +97,109 @@ export function buildChartSeries(
 
   if (!xAxis) return []
 
+  const isTimeSeries =
+    (chartType === 'line' || chartType === 'area') && isDateColumn(xAxis, rows)
+
+  if (isTimeSeries) {
+    const rawKeys = rows
+      .map((r) => normalizeDate(r[xAxis]))
+      .filter((d): d is string => d !== null)
+    const uniqueRaw = [...new Set(rawKeys)]
+    const bucketGranularity = granularity ?? detectGranularity(uniqueRaw)
+
+    if (groupBy) {
+      const groups = new Set(rows.map((r) => String(r[groupBy] ?? '(empty)')))
+      const bucketMap = new Map<string, Map<string, number[]>>()
+
+      for (const row of rows) {
+        const iso = normalizeDate(row[xAxis])
+        if (!iso) continue
+        const bucket = bucketDate(iso, bucketGranularity)
+        const group = String(row[groupBy] ?? '(empty)')
+        if (!bucketMap.has(bucket)) bucketMap.set(bucket, new Map())
+        const gMap = bucketMap.get(bucket)!
+        if (!gMap.has(group)) gMap.set(group, [])
+        if (yAxis) {
+          const n = toNumber(row[yAxis])
+          if (n !== null) gMap.get(group)!.push(n)
+        } else {
+          gMap.get(group)!.push(1)
+        }
+      }
+
+      return Array.from(bucketMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([bucket, gMap]) => {
+          const point: Record<string, string | number> = { name: bucket }
+          for (const g of groups) {
+            point[g] = aggregate(gMap.get(g) ?? [], aggregation)
+          }
+          return point
+        })
+    }
+
+    const bucketMap = new Map<string, number[]>()
+    for (const row of rows) {
+      const iso = normalizeDate(row[xAxis])
+      if (!iso) continue
+      const bucket = bucketDate(iso, bucketGranularity)
+      if (!bucketMap.has(bucket)) bucketMap.set(bucket, [])
+      if (yAxis) {
+        const n = toNumber(row[yAxis])
+        if (n !== null) bucketMap.get(bucket)!.push(n)
+      } else {
+        bucketMap.get(bucket)!.push(1)
+      }
+    }
+
+    return Array.from(bucketMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, nums]) => ({
+        name,
+        value: aggregate(nums, aggregation),
+      }))
+  }
+
+  if (groupBy) {
+    const groups = new Set(rows.map((r) => String(r[groupBy] ?? '(empty)')))
+    const bucketMap = new Map<string, Map<string, number[]>>()
+
+    for (const row of rows) {
+      const key = String(row[xAxis] ?? '(empty)')
+      const group = String(row[groupBy] ?? '(empty)')
+      if (!bucketMap.has(key)) bucketMap.set(key, new Map())
+      const gMap = bucketMap.get(key)!
+      if (!gMap.has(group)) gMap.set(group, [])
+      if (yAxis) {
+        const n = toNumber(row[yAxis])
+        if (n !== null) gMap.get(group)!.push(n)
+      } else {
+        gMap.get(group)!.push(1)
+      }
+    }
+
+    return Array.from(bucketMap.entries())
+      .slice(0, 20)
+      .map(([name, gMap]) => {
+        const point: Record<string, string | number> = {
+          name: name.length > 24 ? `${name.slice(0, 24)}…` : name,
+        }
+        for (const g of groups) {
+          point[g] = aggregate(gMap.get(g) ?? [], aggregation)
+        }
+        return point
+      })
+      .sort((a, b) => {
+        const aTotal = Object.entries(a)
+          .filter(([k]) => k !== 'name')
+          .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
+        const bTotal = Object.entries(b)
+          .filter(([k]) => k !== 'name')
+          .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
+        return bTotal - aTotal
+      })
+  }
+
   const groups = new Map<string, number[]>()
   for (const row of rows) {
     const key = String(row[xAxis] ?? '(empty)')
@@ -71,8 +215,8 @@ export function buildChartSeries(
   return Array.from(groups.entries())
     .map(([name, nums]) => ({
       name: name.length > 24 ? `${name.slice(0, 24)}…` : name,
-      value: aggregate(nums, yAxis ? aggregation : 'count'),
+      value: aggregate(nums, aggregation),
     }))
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => (b.value as number) - (a.value as number))
     .slice(0, 24)
 }

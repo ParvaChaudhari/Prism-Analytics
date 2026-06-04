@@ -10,6 +10,7 @@ import {
 } from '@/lib/dashboard/dashboard-db'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DashboardPayload } from '@/types/dashboard'
+import { inferAggregation } from '@/lib/dashboard/infer-aggregation'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -31,8 +32,9 @@ async function insertAiCharts(
     config: {
       xAxis: chart.xAxis,
       yAxis: chart.yAxis,
-      groupBy: chart.groupBy,
+      ...(chart.groupBy ? { groupBy: chart.groupBy } : {}),
       aggregation: chart.aggregation ?? 'sum',
+      ...(chart.granularity ? { granularity: chart.granularity } : {}),
       description: chart.description,
     },
     is_manual: false,
@@ -94,6 +96,28 @@ export async function POST(request: Request) {
       (existing.dataset.raw_schema as ReturnType<typeof buildSchemaFromRows>) ??
       buildSchemaFromRows(rows)
 
+    const { data: upload } = await admin
+      .from('uploads')
+      .select('computed_stats')
+      .eq('id', (existing.dataset as any).upload_id)
+      .single()
+    const computedStats = upload?.computed_stats
+
+    const processPayload = (payload: DashboardPayload) => {
+      payload.charts = payload.charts.map((chart) => {
+        if (!chart.yAxis) return chart
+        const yCol = computedStats?.columns?.find((c: any) => c.name === chart.yAxis)
+        return {
+          ...chart,
+          aggregation: inferAggregation(chart.yAxis, yCol?.max, yCol?.min)
+        }
+      })
+      const statCards = payload.charts.filter(c => c.chart_type === 'stat').slice(0, 3)
+      const otherCharts = payload.charts.filter(c => c.chart_type !== 'stat').slice(0, 4)
+      payload.charts = [...statCards, ...otherCharts]
+      return payload
+    }
+
     if (existing.dashboard && body.regenerate) {
       await admin
         .from('charts')
@@ -101,7 +125,8 @@ export async function POST(request: Request) {
         .eq('dashboard_id', existing.dashboard.id)
         .eq('is_manual', false)
 
-      const payload = await generateAiPayload(schema, rows)
+      let payload = await generateAiPayload(schema, rows, user.id, computedStats)
+      payload = processPayload(payload)
 
       const { data: dashboard, error: updateError } = await admin
         .from('dashboards')
@@ -127,10 +152,16 @@ export async function POST(request: Request) {
       await insertAiCharts(admin, existing.dashboard.id, user.id, payload, count ?? 0)
       const charts = await fetchCharts(admin, existing.dashboard.id)
 
-      return NextResponse.json({ dashboard, charts, columns: existing.columns })
+      return NextResponse.json({
+        dashboard,
+        charts,
+        columns: existing.columns,
+        aiNotice: payload.aiNotice,
+      })
     }
 
-    const payload = await generateAiPayload(schema, rows)
+    let payload = await generateAiPayload(schema, rows, user.id, computedStats)
+    payload = processPayload(payload)
 
     const { data: dashboard, error: dashError } = await admin
       .from('dashboards')
@@ -155,6 +186,7 @@ export async function POST(request: Request) {
       dashboard,
       charts,
       columns: existing.columns.length ? existing.columns : schema.columns.map((c) => c.name),
+      aiNotice: payload.aiNotice,
     })
   } catch (err) {
     console.error('Dashboard generate error:', err)

@@ -7,7 +7,10 @@ import {
   getDashboardByDatasetId,
   loadDatasetRows,
 } from '@/lib/dashboard/dashboard-db'
+import { fixStatChartAggregations } from '@/lib/dashboard/stat-aggregation'
+import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import type { ChartConfig, ChartType } from '@/types/dashboard'
+import type { GeneratedChart } from '@/types/dashboard'
 
 export const runtime = 'nodejs'
 
@@ -35,17 +38,40 @@ export async function GET(
     : await fetchCharts(admin, result.dashboard.id)
 
   const rows = await loadDatasetRows(admin, datasetId, user.id)
+  const schema = buildSchemaFromRows(rows)
+
+  const statFixed = fixStatChartAggregations(
+    charts.map((c) => {
+      const config = c.config as ChartConfig
+      return {
+        chart_type: c.chart_type as GeneratedChart['chart_type'],
+        title: c.title as string,
+        description: config.description ?? '',
+        xAxis: config.xAxis,
+        yAxis: config.yAxis,
+        aggregation: config.aggregation,
+      }
+    }),
+    schema.columns,
+    rows
+  )
 
   const chartData: Record<string, Array<Record<string, string | number>>> = {}
 
-  for (const chart of charts) {
+  charts.forEach((chart, idx) => {
     const config = chart.config as ChartConfig
+    const fixed = statFixed[idx]
+    const effectiveConfig: ChartConfig =
+      chart.chart_type === 'stat' && fixed
+        ? { ...config, aggregation: fixed.aggregation }
+        : config
+
     chartData[chart.id as string] = buildChartSeries(
       rows,
       chart.chart_type as ChartType,
-      config
+      effectiveConfig
     )
-  }
+  })
 
   return NextResponse.json({
     chartData,

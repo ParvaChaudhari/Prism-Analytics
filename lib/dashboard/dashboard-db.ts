@@ -17,7 +17,7 @@ export async function getDashboardByDatasetId(
 ) {
   const { data: dataset, error: datasetError } = await admin
     .from('datasets')
-    .select('id, raw_schema')
+    .select('id, upload_id, raw_schema')
     .eq('id', datasetId)
     .eq('user_id', userId)
     .single()

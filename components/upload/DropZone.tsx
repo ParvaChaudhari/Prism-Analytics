@@ -2,6 +2,7 @@
 
 import type { DragEvent } from 'react'
 import { useRef, useState } from 'react'
+import { Icon } from '@/components/ui/Icon'
 
 type Props = {
   accept?: string[]
@@ -30,9 +31,9 @@ export function DropZone({ accept = ['.csv', '.xlsx', '.xls'], disabled, onFile 
     <div className="flex flex-col gap-3">
       <div
         className={[
-          'rounded-[18px] border border-border-subtle bg-surface-elevated p-8 text-center transition-colors',
-          dragOver ? 'border-accent bg-accent-light/50' : '',
-          disabled ? 'opacity-60 pointer-events-none' : 'cursor-pointer hover:bg-surface',
+          'upload-dashed p-12 md:p-16 text-center transition-all cursor-pointer',
+          dragOver ? 'bg-primary/5' : 'bg-surface-container-low/50',
+          disabled ? 'opacity-60 pointer-events-none' : 'hover:bg-surface-container-low',
         ].join(' ')}
         onClick={pick}
         onDragEnter={() => setDragOver(true)}
@@ -42,11 +43,15 @@ export function DropZone({ accept = ['.csv', '.xlsx', '.xls'], disabled, onFile 
         role="button"
         tabIndex={0}
       >
-        <div className="text-lg font-semibold mb-2">Drop your file here</div>
-        <div className="text-sm text-text-secondary">
-          CSV or Excel • up to 50MB
+        <div className="w-14 h-14 rounded-xl bg-surface-container flex items-center justify-center mx-auto mb-4">
+          <Icon name="cloud_upload" size={28} className="text-primary" />
         </div>
-        <div className="text-sm text-text-tertiary mt-4">or click to browse</div>
+        <div className="text-lg font-semibold text-primary mb-2">Drag & drop your file here</div>
+        <div className="text-sm text-text-secondary">CSV or Excel • up to 50MB</div>
+        <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-secondary">
+          <Icon name="folder_open" size={18} />
+          or browse files
+        </div>
       </div>
 
       <input
@@ -62,4 +67,3 @@ export function DropZone({ accept = ['.csv', '.xlsx', '.xls'], disabled, onFile 
     </div>
   )
 }
-
