@@ -56,16 +56,17 @@ export function ChartRenderer({
   if (chartType === 'stat') {
     const value = data[0]?.value ?? 0
     return (
-      <div className="h-64 flex flex-col items-center justify-center">
-        <div className="text-4xl font-bold text-primary">{formatStatValue(Number(value), config?.yAxis ?? '')}</div>
-        <div className="text-sm text-text-secondary mt-2">{data[0]?.name}</div>
+      <div className="flex justify-between items-center mt-2">
+        <div className="text-2xl font-bold tracking-tight text-primary">
+          {formatStatValue(Number(value), config?.yAxis ?? '')}
+        </div>
       </div>
     )
   }
 
   if (chartType === 'pie') {
     return (
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}>
             {data.map((_, i) => (
@@ -81,7 +82,7 @@ export function ChartRenderer({
 
   if (chartType === 'scatter') {
     return (
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="x" type="number" />
@@ -98,7 +99,7 @@ export function ChartRenderer({
 
   if (chartType === 'line') {
     return (
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
@@ -122,7 +123,7 @@ export function ChartRenderer({
 
   if (chartType === 'area') {
     return (
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
@@ -146,7 +147,7 @@ export function ChartRenderer({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
         <XAxis

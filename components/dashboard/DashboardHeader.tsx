@@ -13,6 +13,7 @@ type Props = {
   onExport: () => void
   regenerating?: boolean
   exporting?: boolean
+  summary?: string
 }
 
 export function DashboardHeader({
@@ -25,16 +26,20 @@ export function DashboardHeader({
   onExport,
   regenerating,
   exporting,
+  summary,
 }: Props) {
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
-      {title ? (
-        <h1 className="text-[32px] font-semibold text-primary tracking-tight">{title}</h1>
-      ) : (
-        <div />
-      )}
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div>
+        {title ? (
+          <h1 className="font-display-lg text-[28px] md:text-[32px] font-bold text-primary mb-2 tracking-tight">{title}</h1>
+        ) : null}
+        {summary ? (
+          <p className="text-text-secondary text-[14px] md:text-[16px] max-w-2xl">{summary}</p>
+        ) : null}
+      </div>
       <div className="flex flex-wrap gap-2">
-        <Button variant="ai" onClick={onAskAi} className="gap-2 shadow-lg">
+        <Button variant="ai" onClick={onAskAi} className="gap-2 shadow-sm">
           <Icon name="auto_awesome" size={20} filled className="text-white" />
           Ask AI
         </Button>

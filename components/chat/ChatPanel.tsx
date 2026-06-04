@@ -132,19 +132,19 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
 
       <aside
         className={[
-          'fixed z-50 flex flex-col glass-nav shadow-xl',
+          'fixed z-50 flex flex-col bg-white shadow-xl',
           'inset-x-0 bottom-0 h-[75vh] rounded-t-xl border-t border-border-subtle',
-          'lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[400px] lg:h-full lg:rounded-none lg:border-l lg:border-t-0',
+          'lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[360px] lg:h-full lg:rounded-none lg:border-l lg:border-t-0',
         ].join(' ')}
       >
-        <div className="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-container-low/50">
+        <div className="p-5 border-b border-border-subtle flex items-center justify-between bg-surface-container-low/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl ai-gradient flex items-center justify-center">
-              <Icon name="auto_awesome" size={22} className="text-white" filled />
+            <div className="w-8 h-8 rounded-lg ai-gradient flex items-center justify-center">
+              <Icon name="auto_awesome" size={18} className="text-white" filled />
             </div>
             <div>
-              <h3 className="font-bold text-primary">Prism Intelligence</h3>
-              <p className="text-xs text-text-secondary">Ask about your dashboard data</p>
+              <h3 className="font-bold text-primary text-[14px]">Prism Intelligence</h3>
+              <p className="text-[10px] text-text-secondary">AI-Powered Insights</p>
             </div>
           </div>
           <button
@@ -199,22 +199,28 @@ export function ChatPanel({ open, onClose, dashboardId }: Props) {
         ) : null}
 
         <form
-          className="p-5 border-t border-border-subtle flex gap-2 bg-surface-container-low/30"
+          className="p-4 border-t border-border-subtle bg-white"
           onSubmit={(e) => {
             e.preventDefault()
             sendMessage(input)
           }}
         >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about your data…"
-            disabled={loading || streaming}
-            className="flex-1 h-11 rounded-xl border border-border-subtle bg-surface-elevated px-4 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-          />
-          <Button type="submit" size="sm" disabled={loading || streaming || !input.trim()} className="px-3">
-            <Icon name="send" size={18} />
-          </Button>
+          <div className="relative">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask follow-up…"
+              disabled={loading || streaming}
+              className="w-full bg-surface-container-low border-none rounded-lg py-2.5 px-4 pr-10 text-[14px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50"
+            />
+            <button 
+              type="submit" 
+              disabled={loading || streaming || !input.trim()} 
+              className="absolute right-2 top-1.5 w-7 h-7 ai-gradient rounded-md flex items-center justify-center text-white disabled:opacity-50"
+            >
+              <Icon name="send" size={16} />
+            </button>
+          </div>
         </form>
       </aside>
     </>
