@@ -23,7 +23,7 @@ export function AppNav() {
     <header className="glass-nav sticky top-0 z-40 w-full">
       <div className="page-container flex h-16 items-center justify-between max-w-[var(--container-max)]">
         <div className="flex items-center gap-8 md:gap-12">
-          <Link href="/home" className="text-xl font-bold tracking-tight text-primary">
+          <Link href="/home" className="text-[18px] font-bold tracking-tight text-primary">
             Prism
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -34,7 +34,7 @@ export function AppNav() {
                   key={link.href}
                   href={link.href}
                   className={[
-                    'text-sm font-medium transition-colors duration-200 pb-0.5',
+                    'text-[13px] font-medium transition-colors duration-200 pb-0.5',
                     active
                       ? 'text-primary font-semibold border-b-2 border-primary'
                       : 'text-text-secondary hover:text-primary',

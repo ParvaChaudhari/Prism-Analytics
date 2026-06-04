@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { AISummaryCard } from '@/components/dashboard/AISummaryCard'
+// AISummaryCard removed
 import { InsightCards } from '@/components/dashboard/InsightCards'
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
@@ -324,6 +324,7 @@ export function DashboardView() {
           onRegenerate={handleRegenerate}
           regenerating={regenerating}
           exporting={exporting}
+          summary={dashboard.ai_summary}
         />
 
         {error ? (
@@ -333,7 +334,6 @@ export function DashboardView() {
         ) : null}
 
         <div ref={exportRef} className="flex flex-col gap-6">
-          <AISummaryCard title={dashboard.title} summary={dashboard.ai_summary} />
           <InsightCards insights={dashboard.ai_insights} />
           <ChartGrid
             charts={charts}

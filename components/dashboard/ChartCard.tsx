@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-import { Card } from '@/components/ui/Card'
+// Card import removed in favor of standard div
 import { Badge } from '@/components/ui/Badge'
 import { ChartRenderer } from '@/components/dashboard/ChartRenderer'
 import type { ChartConfig, ChartType } from '@/types/dashboard'
@@ -36,8 +36,16 @@ export function ChartCard({
     setEditing(false)
   }
 
+  const isStat = chartType === 'stat'
+
   return (
-    <Card className="p-8 flex flex-col gap-4 group relative min-h-[320px]">
+    <div 
+      className={`glass-card group relative ${
+        isStat 
+          ? 'rounded-xl px-5 py-4 flex flex-col justify-between h-full' 
+          : 'rounded-xl p-8 flex flex-col gap-4 h-full min-h-[400px]'
+      }`}
+    >
       {onDelete ? (
         <button
           type="button"
@@ -68,7 +76,7 @@ export function ChartCard({
             />
           ) : (
             <h3
-              className="font-semibold text-lg cursor-text"
+              className={`${isStat ? 'text-text-secondary text-label-sm block' : 'font-semibold text-lg'} cursor-text`}
               onDoubleClick={() => {
                 setDraftTitle(title)
                 setEditing(true)
@@ -78,13 +86,17 @@ export function ChartCard({
               {title}
             </h3>
           )}
-          <Badge variant={isManual ? 'default' : 'ai'}>
-            {isManual ? 'Manual' : 'AI'}
-          </Badge>
+          {!isStat && (
+            <Badge variant={isManual ? 'default' : 'ai'}>
+              {isManual ? 'Manual' : 'AI'}
+            </Badge>
+          )}
         </div>
         {description ? <p className="text-sm text-text-secondary">{description}</p> : null}
       </div>
-      <ChartRenderer chartType={chartType} config={config} series={series} />
-    </Card>
+      <div className="flex-1 min-h-0 w-full relative">
+        <ChartRenderer chartType={chartType} config={config} series={series} />
+      </div>
+    </div>
   )
 }

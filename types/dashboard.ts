@@ -13,6 +13,7 @@ export type ChartConfig = {
   yAxis?: string
   groupBy?: string
   aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'none'
+  granularity?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'auto' | string
   description?: string
 }
 
@@ -24,6 +25,7 @@ export type GeneratedChart = {
   yAxis?: string
   groupBy?: string
   aggregation?: ChartConfig['aggregation']
+  granularity?: ChartConfig['granularity']
 }
 
 export type DashboardPayload = {
