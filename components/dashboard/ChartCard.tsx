@@ -37,13 +37,19 @@ export function ChartCard({
   }
 
   const isStat = chartType === 'stat'
+  const ACCENT_COLORS = ['#0071E3', '#34C759', '#5AC8FA', '#FF9F0A', '#8E2DE2', '#6E6E73']
+  function pickAccent(key: string) {
+    let sum = 0
+    for (let i = 0; i < key.length; i++) sum += key.charCodeAt(i)
+    return ACCENT_COLORS[sum % ACCENT_COLORS.length]
+  }
 
   return (
     <div 
       className={`glass-card group relative ${
         isStat 
           ? 'rounded-xl px-5 py-4 flex flex-col justify-between h-full' 
-          : 'rounded-xl p-8 flex flex-col gap-4 h-full min-h-[400px]'
+          : 'rounded-xl p-6 flex flex-col gap-4 h-full'
       }`}
     >
       {onDelete ? (
@@ -92,10 +98,16 @@ export function ChartCard({
             </Badge>
           )}
         </div>
-        {description ? <p className="text-sm text-text-secondary">{description}</p> : null}
+        {/* Per-chart descriptions removed to keep the dashboard clean */}
       </div>
-      <div className="flex-1 min-h-0 w-full relative">
-        <ChartRenderer chartType={chartType} config={config} series={series} />
+      <div className="w-full relative">
+        <ChartRenderer
+          chartType={chartType}
+          config={config}
+          series={series}
+          // pick accent color per chart based on title
+          accent={pickAccent(title)}
+        />
       </div>
     </div>
   )

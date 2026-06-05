@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 // AISummaryCard removed
-import { InsightCards } from '@/components/dashboard/InsightCards'
+
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { AddChartModal } from '@/components/dashboard/AddChartModal'
@@ -334,7 +334,6 @@ export function DashboardView() {
         ) : null}
 
         <div ref={exportRef} className="flex flex-col gap-6">
-          <InsightCards insights={dashboard.ai_insights} />
           <ChartGrid
             charts={charts}
             chartData={chartData}
