@@ -27,6 +27,8 @@ export function ChartGrid({
 }) {
   const statCharts = charts.filter((c) => c.chart_type === 'stat')
   const regularCharts = charts.filter((c) => c.chart_type !== 'stat')
+  const topCharts = regularCharts.slice(0, 2)
+  const bottomCharts = regularCharts.slice(2)
 
   if (chartsLoading && !charts.length) {
     return (
@@ -71,19 +73,14 @@ export function ChartGrid({
         </div>
       )}
 
-      {regularCharts.length > 0 && (
+      {topCharts.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {regularCharts.map((chart, i) => {
+          {topCharts.map((chart, i) => {
             const series = chartData[chart.id]
             const loadingChart = chartsLoading && !series
-
-            let gridClass = ''
-            if (i === 0) gridClass = 'lg:col-span-2 lg:row-span-2'
-            else if (i === 1 || i === 2) gridClass = 'lg:col-span-1'
-            else gridClass = 'lg:col-span-3'
-
+            const gridClass = i === 0 ? 'lg:col-span-2' : 'lg:col-span-1'
             return loadingChart ? (
-              <Skeleton key={chart.id} className={`h-full min-h-[400px] rounded-xl ${gridClass}`} />
+              <Skeleton key={chart.id} className={`h-80 rounded-xl ${gridClass}`} />
             ) : (
               <div key={chart.id} className={gridClass}>
                 <ChartCard
@@ -97,6 +94,30 @@ export function ChartGrid({
                   onTitleChange={onTitleChange}
                 />
               </div>
+            )
+          })}
+        </div>
+      )}
+
+      {bottomCharts.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {bottomCharts.map((chart) => {
+            const series = chartData[chart.id]
+            const loadingChart = chartsLoading && !series
+            return loadingChart ? (
+              <Skeleton key={chart.id} className="h-80 rounded-xl" />
+            ) : (
+              <ChartCard
+                key={chart.id}
+                id={chart.id}
+                title={chart.title}
+                chartType={chart.chart_type}
+                config={chart.config}
+                series={series}
+                isManual={chart.is_manual}
+                onDelete={onDelete}
+                onTitleChange={onTitleChange}
+              />
             )
           })}
         </div>

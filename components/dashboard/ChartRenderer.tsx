@@ -44,11 +44,13 @@ export function ChartRenderer({
   config,
   series,
   rows,
+  accent,
 }: {
   chartType: ChartType
   config: ChartConfig
   series?: Array<Record<string, string | number>>
   rows?: Array<Record<string, unknown>>
+  accent?: string
 }) {
   const data = series ?? (rows ? buildChartSeries(rows, chartType, config) : [])
 
@@ -73,7 +75,7 @@ export function ChartRenderer({
 
   if (chartType === 'pie') {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}>
             {data.map((_, i) => (
@@ -89,7 +91,7 @@ export function ChartRenderer({
 
   if (chartType === 'scatter') {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={240}>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="x" type="number" />
@@ -104,9 +106,12 @@ export function ChartRenderer({
   const keys = seriesKeysFromData(data)
   const isMulti = keys.length > 1 || (keys.length === 1 && keys[0] !== 'value')
 
+  const ACCENT_COLORS = ['#0071E3', '#34C759', '#5AC8FA', '#FF9F0A', '#8E2DE2', '#6E6E73']
+  const chartAccent = accent ?? ACCENT_COLORS[0]
+
   if (chartType === 'line') {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
@@ -118,7 +123,7 @@ export function ChartRenderer({
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={COLORS[i % COLORS.length]}
+              stroke={isMulti ? COLORS[i % COLORS.length] : chartAccent}
               strokeWidth={2}
               dot={false}
             />
@@ -130,7 +135,7 @@ export function ChartRenderer({
 
   if (chartType === 'area') {
     return (
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={240}>
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
@@ -143,8 +148,8 @@ export function ChartRenderer({
               type="monotone"
               dataKey={key}
               stackId={isMulti ? 'stack' : undefined}
-              stroke={COLORS[i % COLORS.length]}
-              fill={COLORS[i % COLORS.length]}
+              stroke={isMulti ? COLORS[i % COLORS.length] : chartAccent}
+              fill={isMulti ? COLORS[i % COLORS.length] : chartAccent}
               fillOpacity={0.2}
             />
           ))}
@@ -154,8 +159,8 @@ export function ChartRenderer({
   }
 
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={data}>
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={data} barSize={36}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
         <XAxis
           dataKey="name"
@@ -169,7 +174,12 @@ export function ChartRenderer({
         <Tooltip formatter={formatTooltipValue} />
         {isMulti ? <Legend /> : null}
         {keys.map((key, i) => (
-          <Bar key={key} dataKey={key} fill={COLORS[i % COLORS.length]} />
+          <Bar
+            key={key}
+            dataKey={key}
+            fill={isMulti ? COLORS[i % COLORS.length] : chartAccent}
+            barSize={isMulti ? undefined : 36}
+          />
         ))}
       </BarChart>
     </ResponsiveContainer>

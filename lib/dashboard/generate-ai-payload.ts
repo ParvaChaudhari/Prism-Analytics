@@ -154,18 +154,18 @@ Metadata: ${JSON.stringify(context.metadata)}
 Generate a complete dashboard with:
 
 1. title: short, specific dashboard title (not generic like "Data Dashboard")
-2. ai_summary: exactly 4 sentences:
-   - Sentence 1: What is this data about and what time period does it cover
-   - Sentence 2: The single most important trend or finding
-   - Sentence 3: A secondary notable pattern or anomaly
-   - Sentence 4: One specific actionable recommendation
-3. ai_insights: array of 4-6 insight objects [{title, description, type}]
-   - type: "positive" | "negative" | "neutral" | "warning"
-4. charts: array of 5-8 charts [{chart_type, title, description, xAxis, yAxis, aggregation}]
+2. ai_summary: EXACTLY 2 sentences:
+   - Sentence 1: What is this data about?
+   - Sentence 2: The single most important finding or takeaway.
+3. ai_insights: [] (Always return an empty array)
+4. charts: exactly 3 stat cards + up to 4 other charts.
+   - chart_type, title, description, xAxis, yAxis, aggregation
+   - description: 1 short sentence max.
 
 Chart generation rules:
-- Generate 5–8 charts total
-- If a date column exists: FIRST chart must be line or area (time series)
+- Generate 3 stat cards and max 4 regular charts.
+- Do not generate more than 4 non-stat charts. Each must show something meaningfully different.
+- If a date column exists: FIRST regular chart must be line or area (time series)
 - Always include 2–3 stat cards for the most important numeric columns
 
 Stat card aggregation rules (critical):
