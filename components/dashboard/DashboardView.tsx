@@ -147,12 +147,6 @@ export function DashboardView() {
 
       try {
         const res = await fetch(`/api/dashboard/${datasetId}`)
-        const data = (await res.json()) as {
-          dashboard?: ApiDashboard
-          charts?: ChartItem[]
-          columns?: string[]
-          error?: string
-        }
 
         if (res.status === 404) {
           if (cancelled) return
@@ -161,6 +155,18 @@ export function DashboardView() {
           await runGenerate(datasetId)
           if (!cancelled) setGenerating(false)
           return
+        }
+
+        let data: {
+          dashboard?: ApiDashboard
+          charts?: ChartItem[]
+          columns?: string[]
+          error?: string
+        }
+        try {
+          data = await res.json()
+        } catch {
+          throw new Error(res.ok ? 'Invalid response from server' : 'Failed to load dashboard')
         }
 
         if (!res.ok) throw new Error(data.error || 'Failed to load dashboard')
