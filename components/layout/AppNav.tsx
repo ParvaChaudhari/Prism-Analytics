@@ -66,34 +66,34 @@ export function AppNav() {
   return (
     <header className="glass-nav sticky top-0 z-40 w-full">
       <div className="page-container flex h-16 items-center justify-between max-w-[var(--container-max)]">
-        <div className="flex items-center gap-8 md:gap-12">
-          <Link href="/home" className="text-[18px] font-bold tracking-tight text-primary">
+        <div className="flex h-full gap-8 md:gap-12">
+          <Link href="/home" className="self-center text-[18px] font-bold tracking-tight text-primary">
             Prism
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-stretch h-full">
             {/* Dashboards tab */}
             <Link
               href="/home"
               className={[
-                'text-[13px] font-medium transition-colors duration-200 pb-0.5',
+                'text-[13px] font-medium transition-colors duration-200 flex items-center px-3',
                 isDashboardActive
-                  ? 'text-primary font-semibold border-b-2 border-primary'
-                  : 'text-text-secondary hover:text-primary',
+                  ? 'text-primary font-semibold bg-surface-container border-b-2 border-primary'
+                  : 'text-text-secondary hover:bg-surface-container-low hover:text-primary',
               ].join(' ')}
             >
               Dashboards
             </Link>
 
             {/* Datasets dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div className="relative flex items-stretch" ref={dropdownRef}>
               <button
                 onClick={openDatasets}
                 className={[
-                  'text-[13px] font-medium transition-colors duration-200 pb-0.5 flex items-center gap-1',
+                  'text-[13px] font-medium transition-colors duration-200 flex items-center gap-1 px-3',
                   dropdownOpen
-                    ? 'text-primary font-semibold'
-                    : 'text-text-secondary hover:text-primary',
+                    ? 'text-primary font-semibold bg-surface-container'
+                    : 'text-text-secondary hover:bg-surface-container-low hover:text-primary',
                 ].join(' ')}
               >
                 Datasets
@@ -175,10 +175,10 @@ export function AppNav() {
             <Link
               href="/upload"
               className={[
-                'text-[13px] font-medium transition-colors duration-200 pb-0.5',
+                'text-[13px] font-medium transition-colors duration-200 flex items-center px-3',
                 isUploadActive
-                  ? 'text-primary font-semibold border-b-2 border-primary'
-                  : 'text-text-secondary hover:text-primary',
+                  ? 'text-primary font-semibold bg-surface-container border-b-2 border-primary'
+                  : 'text-text-secondary hover:bg-surface-container-low hover:text-primary',
               ].join(' ')}
             >
               Upload

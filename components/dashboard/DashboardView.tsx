@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation'
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { AddChartModal } from '@/components/dashboard/AddChartModal'
-import { CompareModal } from '@/components/dashboard/CompareModal'
 import { StoryModal } from '@/components/dashboard/StoryModal'
 import { ChatPanel } from '@/components/chat/ChatPanel'
 import { exportDashboardPdf } from '@/lib/dashboard/export-pdf'
@@ -57,7 +56,7 @@ export function DashboardView() {
   >({})
   const [modalOpen, setModalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
-  const [compareOpen, setCompareOpen] = useState(false)
+
   const [storyOpen, setStoryOpen] = useState(false)
 
   const loadChartData = useCallback(
@@ -323,7 +322,7 @@ export function DashboardView() {
         <DashboardHeader
           title={dashboard.title}
           onAskAi={() => setChatOpen(true)}
-          onCompare={() => setCompareOpen(true)}
+
           onStory={() => setStoryOpen(true)}
           onExport={handleExport}
           onAddChart={() => setModalOpen(true)}
@@ -355,12 +354,6 @@ export function DashboardView() {
           datasetId={datasetId}
           columns={columns}
           onCreated={handleChartCreated}
-        />
-
-        <CompareModal
-          isOpen={compareOpen}
-          onClose={() => setCompareOpen(false)}
-          currentDatasetId={datasetId}
         />
 
         <StoryModal
