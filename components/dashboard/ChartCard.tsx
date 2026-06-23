@@ -45,12 +45,11 @@ export function ChartCard({
   }
 
   return (
-    <div 
-      className={`glass-card group relative ${
-        isStat 
-          ? 'rounded-xl px-5 py-4 flex flex-col justify-between h-full' 
-          : 'rounded-xl p-6 flex flex-col gap-4 h-full'
-      }`}
+    <div
+      className={`glass-card group relative ${isStat
+          ? 'rounded-xl px-4 py-3 flex flex-col justify-between h-full'
+          : 'rounded-xl p-4 flex flex-col gap-3 h-full'
+        }`}
     >
       {onDelete ? (
         <button

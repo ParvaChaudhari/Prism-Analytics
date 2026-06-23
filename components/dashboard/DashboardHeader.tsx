@@ -27,8 +27,14 @@ export function DashboardHeader({
   summary,
 }: Props) {
   return (
-    <div className="flex flex-col gap-6 mb-8">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-3">
+      <div className="flex-1 max-w-4xl">
+        {title ? (
+          <h1 className="font-display-lg text-xl md:text-2xl font-bold text-primary mb-1 tracking-tight">{title}</h1>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 xl:justify-end shrink-0">
         <Button variant="ai" onClick={onAskAi} className="gap-2 shadow-sm">
           <Icon name="auto_awesome" size={20} filled className="text-white" />
           Ask AI
@@ -46,15 +52,6 @@ export function DashboardHeader({
         <Button variant="secondary" onClick={onRegenerate} disabled={regenerating}>
           {regenerating ? 'Regenerating…' : 'Regenerate'}
         </Button>
-      </div>
-
-      <div className="w-full">
-        {title ? (
-          <h1 className="font-display-lg text-[28px] md:text-[32px] font-bold text-primary mb-2 tracking-tight">{title}</h1>
-        ) : null}
-        {summary ? (
-          <p className="text-text-secondary text-[14px] md:text-[16px] w-full">{summary}</p>
-        ) : null}
       </div>
     </div>
   )
