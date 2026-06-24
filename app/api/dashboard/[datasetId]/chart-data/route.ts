@@ -10,8 +10,7 @@ import {
 import { fixStatChartAggregations } from '@/lib/dashboard/stat-aggregation'
 import { inferAggregation } from '@/lib/dashboard/infer-aggregation'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
-import type { ChartConfig, ChartType } from '@/types/dashboard'
-import type { GeneratedChart } from '@/types/dashboard'
+import type { ChartConfig, ChartType, ChartDataPoint, GeneratedChart } from '@/types/dashboard'
 
 export const runtime = 'nodejs'
 
@@ -57,7 +56,8 @@ export async function GET(
     rows
   )
 
-  const chartData: Record<string, Array<Record<string, string | number>>> = {}
+  const chartData: Record<string, ChartDataPoint[]> = {}
+  const listColumns = schema.columns.filter(c => c.type === 'list').map(c => c.name)
 
   charts.forEach((chart, idx) => {
     const config = chart.config as ChartConfig
@@ -79,7 +79,8 @@ export async function GET(
     chartData[chart.id as string] = buildChartSeries(
       rows,
       chart.chart_type as ChartType,
-      effectiveConfig
+      effectiveConfig,
+      listColumns
     )
   })
 

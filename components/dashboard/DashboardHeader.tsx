@@ -13,6 +13,8 @@ type Props = {
   regenerating?: boolean
   exporting?: boolean
   summary?: string
+  activeView: 'charts' | 'data'
+  onViewChange: (view: 'charts' | 'data') => void
 }
 
 export function DashboardHeader({
@@ -25,6 +27,8 @@ export function DashboardHeader({
   regenerating,
   exporting,
   summary,
+  activeView,
+  onViewChange,
 }: Props) {
   return (
     <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
@@ -35,6 +39,25 @@ export function DashboardHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 xl:justify-end shrink-0">
+        <div className="flex items-center bg-surface-container-low border border-border-subtle rounded-lg p-1 mr-2">
+          <button
+            onClick={() => onViewChange('charts')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              activeView === 'charts' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
+            }`}
+          >
+            Charts
+          </button>
+          <button
+            onClick={() => onViewChange('data')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              activeView === 'data' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
+            }`}
+          >
+            Raw Data
+          </button>
+        </div>
+
         <Button variant="ai" size="sm" onClick={onAskAi} title="Ask AI" className="px-3 shadow-sm">
           <Icon name="auto_awesome" size={18} filled className="text-white" />
         </Button>

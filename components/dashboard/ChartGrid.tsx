@@ -2,7 +2,8 @@
 
 import { ChartCard } from '@/components/dashboard/ChartCard'
 import { Skeleton } from '@/components/ui/Skeleton'
-import type { ChartConfig, ChartType } from '@/types/dashboard'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
 
 export type ChartItem = {
   id: string
@@ -20,7 +21,7 @@ export function ChartGrid({
   onTitleChange,
 }: {
   charts: ChartItem[]
-  chartData: Record<string, Array<Record<string, string | number>>>
+  chartData: Record<string, ChartDataPoint[]>
   chartsLoading?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void
@@ -37,17 +38,19 @@ export function ChartGrid({
       <Skeleton key={chart.id} className={`rounded-xl ${chart.chart_type === 'stat' ? 'h-24' : 'h-[300px]'} ${extraClasses}`} />
     ) : (
       <div key={chart.id} className={extraClasses}>
-        <ChartCard
-          id={chart.id}
-          title={chart.title}
-          chartType={chart.chart_type}
-          config={chart.config}
-          series={series}
-          isManual={chart.is_manual}
-          onDelete={onDelete}
-          onTitleChange={onTitleChange}
-          tall={tall}
-        />
+        <ErrorBoundary>
+          <ChartCard
+            id={chart.id}
+            title={chart.title}
+            chartType={chart.chart_type}
+            config={chart.config}
+            series={series}
+            isManual={chart.is_manual}
+            onDelete={onDelete}
+            onTitleChange={onTitleChange}
+            tall={tall}
+          />
+        </ErrorBoundary>
       </div>
     )
   }

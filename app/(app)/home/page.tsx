@@ -5,16 +5,14 @@ import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { DashboardPreviewCard } from '@/components/dashboard/DashboardPreviewCard'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 type DashboardRow = {
   id: string
-  title: string | null
-  dataset_id: string
   created_at: string
-  datasets: {
-    row_count: number | null
-    uploads: { original_filename: string | null } | null
-  } | null
+  row_count: number | null
+  uploads: { original_filename: string | null } | null
+  dashboards: { id: string; title: string | null }[] | null
 }
 
 export default async function HomePage() {
@@ -23,24 +21,27 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const { data: dashboards } = await supabase
-    .from('dashboards')
+  const admin = createAdminClient()
+  const { data: datasets, error } = await admin
+    .from('datasets')
     .select(
       `
       id,
-      title,
-      dataset_id,
       created_at,
-      datasets (
-        row_count,
-        uploads ( original_filename )
-      )
+      row_count,
+      uploads ( original_filename ),
+      dashboards ( id, title )
     `
     )
+    .eq('user_id', user?.id)
     .order('created_at', { ascending: false })
     .limit(12)
 
-  const items = (dashboards ?? []) as unknown as DashboardRow[]
+  if (error) {
+    console.error('Datasets Query Error:', error)
+  }
+
+  const items = (datasets ?? []) as any[]
 
   return (
     <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8">
@@ -62,15 +63,16 @@ export default async function HomePage() {
       {items.length ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((d) => {
-            const filename = d.datasets?.uploads?.original_filename ?? 'Dataset'
-            const rowCount = d.datasets?.row_count ?? 0
+            const filename = d.uploads?.original_filename ?? 'Dataset'
+            const rowCount = d.row_count ?? 0
+            const dashboardTitle = d.dashboards?.[0]?.title
             return (
-              <Link key={d.id} href={`/dashboard/${d.dataset_id}`} className="group">
+              <Link key={d.id} href={`/dashboard/${d.id}`} className="group">
                 <Card className="p-0 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
-                  <DashboardPreviewCard title={d.title || filename} />
+                  <DashboardPreviewCard title={dashboardTitle || filename} />
                   <div className="p-5 flex flex-col gap-2 flex-1">
                     <h3 className="font-semibold text-primary truncate group-hover:text-secondary transition-colors">
-                      {d.title || 'Untitled dashboard'}
+                      {dashboardTitle || 'Untitled dashboard'}
                     </h3>
                     <p className="text-sm text-text-secondary truncate">{filename}</p>
                     <div className="flex items-center gap-2 mt-auto pt-2">

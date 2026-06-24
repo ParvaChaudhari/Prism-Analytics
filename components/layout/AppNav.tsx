@@ -60,7 +60,7 @@ export function AppNav() {
     }
   }
 
-  const isDashboardActive = pathname === '/home' || pathname.startsWith('/dashboard')
+  const isDashboardActive = pathname.startsWith('/dashboard')
   const isUploadActive = pathname === '/upload' || pathname.startsWith('/health')
 
   return (
@@ -72,18 +72,14 @@ export function AppNav() {
           </Link>
 
           <nav className="hidden md:flex items-stretch h-full">
-            {/* Dashboards tab */}
-            <Link
-              href="/home"
-              className={[
-                'text-[13px] font-medium transition-colors duration-200 flex items-center px-3',
-                isDashboardActive
-                  ? 'text-primary font-semibold bg-surface-container border-b-2 border-primary'
-                  : 'text-text-secondary hover:bg-surface-container-low hover:text-primary',
-              ].join(' ')}
-            >
-              Dashboards
-            </Link>
+            {/* Dashboard tab (only visible when viewing a dashboard) */}
+            {isDashboardActive && (
+              <div
+                className="text-[13px] font-medium transition-colors duration-200 flex items-center px-3 text-primary font-semibold bg-surface-container border-b-2 border-primary"
+              >
+                Dashboard
+              </div>
+            )}
 
             {/* Datasets dropdown */}
             <div className="relative flex items-stretch" ref={dropdownRef}>

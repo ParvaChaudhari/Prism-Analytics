@@ -1,4 +1,4 @@
-import type { ChartConfig, ChartType } from '@/types/dashboard'
+import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
 
 function toNumber(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v
@@ -69,11 +69,35 @@ function isDateColumn(colName: string, rows: Array<Record<string, unknown>>): bo
 export function buildChartSeries(
   rows: Array<Record<string, unknown>>,
   chartType: ChartType,
-  config: ChartConfig
-): Array<Record<string, string | number>> {
+  config: ChartConfig,
+  listColumns: string[] = []
+): ChartDataPoint[] {
   let { xAxis, yAxis, groupBy, aggregation = 'sum' } = config
+
+  let processedRows = rows
+
+  if (xAxis && listColumns.includes(xAxis)) {
+    processedRows = processedRows.flatMap((row) => {
+      const val = row[xAxis]
+      if (typeof val !== 'string') return [row]
+      const parts = val.split(',').map((s) => s.trim()).filter(Boolean)
+      if (parts.length === 0) return [row]
+      return parts.map((part) => ({ ...row, [xAxis]: part }))
+    })
+  }
+
+  if (groupBy && listColumns.includes(groupBy)) {
+    processedRows = processedRows.flatMap((row) => {
+      const val = row[groupBy!] // groupBy is defined here
+      if (typeof val !== 'string') return [row]
+      const parts = val.split(',').map((s) => s.trim()).filter(Boolean)
+      if (parts.length === 0) return [row]
+      return parts.map((part) => ({ ...row, [groupBy!]: part }))
+    })
+  }
+
   if (yAxis && aggregation !== 'count') {
-    const isNumeric = rows.slice(0, 10).some(r => toNumber(r[yAxis]) !== null)
+    const isNumeric = processedRows.slice(0, 10).some(r => toNumber(r[yAxis]) !== null)
     if (!isNumeric) {
       aggregation = 'count'
     }
@@ -84,16 +108,16 @@ export function buildChartSeries(
       : undefined
 
   if (chartType === 'stat') {
-    if (aggregation === 'count') return [{ name: 'Count', value: rows.length }]
+    if (aggregation === 'count') return [{ name: 'Count', value: processedRows.length }]
     if (yAxis) {
-      const nums = rows.map((r) => toNumber(r[yAxis])).filter((n): n is number => n !== null)
+      const nums = processedRows.map((r) => toNumber(r[yAxis])).filter((n): n is number => n !== null)
       return [{ name: yAxis, value: aggregate(nums, aggregation) }]
     }
-    return [{ name: 'Rows', value: rows.length }]
+    return [{ name: 'Rows', value: processedRows.length }]
   }
 
   if (chartType === 'scatter' && xAxis && yAxis) {
-    return rows
+    return processedRows
       .slice(0, 400)
       .map((r, i) => ({
         name: String(i),
@@ -106,20 +130,20 @@ export function buildChartSeries(
   if (!xAxis) return []
 
   const isTimeSeries =
-    (chartType === 'line' || chartType === 'area') && isDateColumn(xAxis, rows)
+    (chartType === 'line' || chartType === 'area') && isDateColumn(xAxis, processedRows)
 
   if (isTimeSeries) {
-    const rawKeys = rows
+    const rawKeys = processedRows
       .map((r) => normalizeDate(r[xAxis]))
       .filter((d): d is string => d !== null)
     const uniqueRaw = [...new Set(rawKeys)]
     const bucketGranularity = granularity ?? detectGranularity(uniqueRaw)
 
     if (groupBy) {
-      const groups = new Set(rows.map((r) => String(r[groupBy] ?? '(empty)')))
+      const groups = new Set(processedRows.map((r) => String(r[groupBy] ?? '(empty)')))
       const bucketMap = new Map<string, Map<string, number[]>>()
 
-      for (const row of rows) {
+      for (const row of processedRows) {
         const iso = normalizeDate(row[xAxis])
         if (!iso) continue
         const bucket = bucketDate(iso, bucketGranularity)
@@ -138,7 +162,7 @@ export function buildChartSeries(
       return Array.from(bucketMap.entries())
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([bucket, gMap]) => {
-          const point: Record<string, string | number> = { name: bucket }
+          const point: ChartDataPoint = { name: bucket }
           for (const g of groups) {
             point[g] = aggregate(gMap.get(g) ?? [], aggregation)
           }
@@ -147,7 +171,7 @@ export function buildChartSeries(
     }
 
     const bucketMap = new Map<string, number[]>()
-    for (const row of rows) {
+    for (const row of processedRows) {
       const iso = normalizeDate(row[xAxis])
       if (!iso) continue
       const bucket = bucketDate(iso, bucketGranularity)
@@ -169,10 +193,10 @@ export function buildChartSeries(
   }
 
   if (groupBy) {
-    const groups = new Set(rows.map((r) => String(r[groupBy] ?? '(empty)')))
+    const groups = new Set(processedRows.map((r) => String(r[groupBy] ?? '(empty)')))
     const bucketMap = new Map<string, Map<string, number[]>>()
 
-    for (const row of rows) {
+    for (const row of processedRows) {
       const key = String(row[xAxis] ?? '(empty)')
       const group = String(row[groupBy] ?? '(empty)')
       if (!bucketMap.has(key)) bucketMap.set(key, new Map())
@@ -189,7 +213,7 @@ export function buildChartSeries(
     return Array.from(bucketMap.entries())
       .slice(0, 20)
       .map(([name, gMap]) => {
-        const point: Record<string, string | number> = {
+        const point: ChartDataPoint = {
           name: name.length > 24 ? `${name.slice(0, 24)}…` : name,
         }
         for (const g of groups) {
@@ -209,7 +233,7 @@ export function buildChartSeries(
   }
 
   const groups = new Map<string, number[]>()
-  for (const row of rows) {
+  for (const row of processedRows) {
     const key = String(row[xAxis] ?? '(empty)')
     if (!groups.has(key)) groups.set(key, [])
     if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
