@@ -16,6 +16,7 @@ export function ChartCard({
   isManual,
   onDelete,
   onTitleChange,
+  tall,
 }: {
   id: string
   title: string
@@ -25,6 +26,7 @@ export function ChartCard({
   isManual?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void
+  tall?: boolean
 }) {
   const description = config.description ?? ''
   const [editing, setEditing] = useState(false)
@@ -106,6 +108,7 @@ export function ChartCard({
           series={series}
           // pick accent color per chart based on title
           accent={pickAccent(title)}
+          tall={tall}
         />
       </div>
     </div>

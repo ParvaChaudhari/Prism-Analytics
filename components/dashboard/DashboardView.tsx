@@ -315,7 +315,7 @@ export function DashboardView() {
     <>
       <div
         className={[
-          'page-container py-8 max-w-[var(--container-max)] flex flex-col gap-6 transition-[padding] duration-300',
+          'page-container pt-4 pb-6 max-w-[var(--container-max)] flex flex-col gap-4 transition-[padding] duration-300',
           chatOpen ? 'lg:pr-[420px]' : '',
         ].join(' ')}
       >
