@@ -25,7 +25,7 @@
   --destructive: #ba1a1a;
   --success: #005ab7;
   --warning: #ff9500;
-  --container-max: 1200px;
+  --container-max: 1600px;
   --margin-desktop: 40px;
   --margin-mobile: 20px;
   --gutter: 24px;
@@ -64,11 +64,9 @@ body {
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--surface-elevated);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .glass-nav {

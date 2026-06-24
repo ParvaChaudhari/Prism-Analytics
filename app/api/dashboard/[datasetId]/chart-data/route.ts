@@ -8,6 +8,7 @@ import {
   loadDatasetRows,
 } from '@/lib/dashboard/dashboard-db'
 import { fixStatChartAggregations } from '@/lib/dashboard/stat-aggregation'
+import { inferAggregation } from '@/lib/dashboard/infer-aggregation'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import type { ChartConfig, ChartType } from '@/types/dashboard'
 import type { GeneratedChart } from '@/types/dashboard'
@@ -61,10 +62,19 @@ export async function GET(
   charts.forEach((chart, idx) => {
     const config = chart.config as ChartConfig
     const fixed = statFixed[idx]
-    const effectiveConfig: ChartConfig =
-      chart.chart_type === 'stat' && fixed
-        ? { ...config, aggregation: fixed.aggregation }
-        : config
+
+    // For stat charts: use the runtime-corrected aggregation from fixStatChartAggregations
+    // For all other charts: re-infer aggregation from the column name at render time.
+    // This corrects charts that were stored in the DB with a wrong 'sum' aggregation.
+    let effectiveAggregation = config.aggregation
+    if (chart.chart_type === 'stat' && fixed) {
+      effectiveAggregation = fixed.aggregation
+    } else if (chart.chart_type !== 'stat' && config.yAxis) {
+      // Re-infer so stored 'sum' on avg-type columns (BMI, calories, etc.) gets corrected
+      effectiveAggregation = inferAggregation(config.yAxis)
+    }
+
+    const effectiveConfig: ChartConfig = { ...config, aggregation: effectiveAggregation }
 
     chartData[chart.id as string] = buildChartSeries(
       rows,

@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const runtime = 'nodejs'
 
 const BUCKET = 'uploads'
-const MAX_BYTES = 50 * 1024 * 1024
+const MAX_BYTES = 3 * 1024 * 1024
 
 function contentTypeForExt(ext: string) {
   switch (ext) {

@@ -68,17 +68,17 @@ function normalizeAiIssue(raw: Record<string, unknown>): HealthIssueInput | null
 
     ? (raw.options as Array<Record<string, unknown>>)
 
-        .map((o) => ({
+      .map((o) => ({
 
-          label: String(o.label ?? ''),
+        label: String(o.label ?? ''),
 
-          action: String(o.action ?? 'keep_as_is'),
+        action: String(o.action ?? 'keep_as_is'),
 
-          value: o.value,
+        value: o.value,
 
-        }))
+      }))
 
-        .filter((o) => o.label && o.action)
+      .filter((o) => o.label && o.action)
 
     : [{ label: 'Keep as is', action: 'keep_as_is' }]
 

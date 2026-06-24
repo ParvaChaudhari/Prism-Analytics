@@ -4,7 +4,7 @@ const AVG_ALWAYS = [
   // Health & body
   'bmi', 'height', 'weight', 'age', 'temperature', 'heart_rate', 'pulse',
   'blood_pressure', 'cholesterol', 'glucose', 'oxygen', 'intake',
-  'consumption', 'calories', 'caloric', 'protein', 'carbohydrate',
+  'consumption', 'consumed', 'calories', 'caloric', 'protein', 'carbohydrate',
   'fat', 'fiber', 'sodium', 'sugar', 'vitamin', 'mineral', 'nutrient',
   'water', 'hydration', 'sleep', 'steps', 'distance',
   // Scores & indexes
@@ -74,6 +74,7 @@ export function inferAggregation(
   const isDecimalScale = max != null && min != null && max <= 1.0 && min >= 0
   if (isDecimalScale) return 'avg'
 
-  // Default → sum
-  return 'sum'
+  // Default → avg (most columns are per-record values that should be averaged
+  // when grouped by a category — summing them produces misleading huge numbers)
+  return 'avg'
 }

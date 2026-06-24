@@ -32,9 +32,9 @@ export default function UploadPage() {
       return
     }
 
-    if (file.size > 50 * 1024 * 1024) {
+    if (file.size > 3 * 1024 * 1024) {
       setStatus('error')
-      setDetails('File too large (max 50MB).')
+      setDetails('File too large (max 3MB).')
       return
     }
 

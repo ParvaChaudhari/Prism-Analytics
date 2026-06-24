@@ -4,6 +4,7 @@ import { generateJsonObject, generateText, parseJsonObject } from '@/lib/gemini-
 import { fallbackDashboard } from '@/lib/dashboard/fallback-dashboard'
 import { fixStatChartAggregations } from '@/lib/dashboard/stat-aggregation'
 import { dedupeCharts, dropEmptyCharts, validateChart } from '@/lib/dashboard/validate-chart'
+import { removeFlatCharts } from '@/lib/dashboard/chart-quality'
 import type { DatasetSchema } from '@/lib/parsers/schema'
 import type { DashboardPayload, GeneratedChart, Insight } from '@/types/dashboard'
 
@@ -51,11 +52,9 @@ function normalizeCharts(
     if (valid) charts.push(valid)
   }
 
-  return fixStatChartAggregations(
-    dropEmptyCharts(dedupeCharts(charts), columns),
-    columns,
-    rows
-  )
+  const validated = dropEmptyCharts(dedupeCharts(charts), columns)
+  const withoutFlat = removeFlatCharts(validated, rows, columns)
+  return fixStatChartAggregations(withoutFlat, columns, rows)
 }
 
 function normalizePayload(
@@ -85,6 +84,8 @@ type AnalysisPass = {
   valuableColumns?: string[]
   patterns?: string
   timeGranularity?: string
+  columnPairs?: string[]
+  flatColumns?: string[]
 }
 
 async function runAnalysisPass(
@@ -93,11 +94,13 @@ async function runAnalysisPass(
 ): Promise<AnalysisPass | null> {
   const prompt = `You are a senior data analyst. Analyze this dataset and answer:
 
-1. What type of dataset is this? (sales, marketing, finance, HR, supply chain, other)
+1. What type of dataset is this? (sales, marketing, finance, HR, supply chain, health/wellness, other)
 2. What are the 4 most important business questions this data can answer?
 3. Which columns are the most analytically valuable and why?
 4. Are there any interesting patterns, correlations, or anomalies visible in the stats?
 5. What time granularity should be used if date columns exist? (daily/weekly/monthly)
+6. Are there any column pairs that represent a "target vs actual" or "required vs consumed" or "budget vs spent" relationship? List them as "col_a vs col_b".
+7. Looking at the column stats, which categorical columns have UNEVEN distributions (some categories much larger than others, good for charts) vs EVEN distributions (all categories nearly equal, would produce flat/useless charts)?
 
 Dataset metadata: ${JSON.stringify(context.metadata)}
 Column stats: ${JSON.stringify(context.columnStats)}
@@ -107,7 +110,9 @@ Respond in JSON only with keys:
 - keyQuestions (string array of 4)
 - valuableColumns (string array)
 - patterns (string)
-- timeGranularity (string or null)`
+- timeGranularity (string or null)
+- columnPairs (string array of "col_a vs col_b" pairs, or empty array)
+- flatColumns (string array of categorical columns that have nearly even distribution and would produce flat charts, or empty array)`
 
   try {
     const { data } = await generateJsonObject(prompt, {
@@ -126,6 +131,12 @@ Respond in JSON only with keys:
       patterns: typeof data.patterns === 'string' ? data.patterns : undefined,
       timeGranularity:
         typeof data.timeGranularity === 'string' ? data.timeGranularity : undefined,
+      columnPairs: Array.isArray(data.columnPairs)
+        ? data.columnPairs.map(String)
+        : undefined,
+      flatColumns: Array.isArray(data.flatColumns)
+        ? data.flatColumns.map(String)
+        : undefined,
     }
   } catch {
     return null
@@ -147,6 +158,8 @@ Key questions this dashboard should answer: ${JSON.stringify(analysis?.keyQuesti
 Most valuable columns: ${JSON.stringify(analysis?.valuableColumns ?? [])}
 Patterns noted: ${analysis?.patterns ?? 'none'}
 Time granularity: ${analysis?.timeGranularity ?? 'auto'}
+Column pairs (target vs actual): ${JSON.stringify(analysis?.columnPairs ?? [])}
+Flat columns (avoid as xAxis for bar charts): ${JSON.stringify(analysis?.flatColumns ?? [])}
 Schema: ${JSON.stringify(context.schema)}
 Column stats: ${JSON.stringify(context.columnStats)}
 Metadata: ${JSON.stringify(context.metadata)}
@@ -158,22 +171,41 @@ Generate a complete dashboard with:
    - Sentence 1: What is this data about?
    - Sentence 2: The single most important finding or takeaway.
 3. ai_insights: [] (Always return an empty array)
-4. charts: exactly 3 stat cards + up to 4 other charts.
+4. charts: exactly 3 stat cards + exactly 4 other charts.
    - chart_type, title, description, xAxis, yAxis, aggregation
    - description: 1 short sentence max.
 
 Chart generation rules:
-- Generate 3 stat cards and max 4 regular charts.
-- Do not generate more than 4 non-stat charts. Each must show something meaningfully different.
+- Generate exactly 3 stat cards and exactly 4 regular charts (7 total).
+- Each regular chart must show something meaningfully different.
 - If a date column exists: FIRST regular chart must be line or area (time series)
-- Always include 2–3 stat cards for the most important numeric columns
 
-Stat card aggregation rules (critical):
-- Use aggregation "avg" for: risk scores, percentages, rates, satisfaction scores, performance scores, any column where values are between 0–1 or 0–100, or titles containing "average"/"mean"
+AGGREGATION RULES — CRITICAL, follow strictly for ALL chart types (stat, bar, pie, line, area, scatter):
+- Every chart MUST include an "aggregation" field.
+- Use "avg" for per-record metrics: scores, rates, prices, BMI, calories, temperature, satisfaction, percentages, ratios, indexes, any measurement per individual/row.
+- Use "sum" ONLY for cumulative totals: total revenue, total quantity, total spend, total orders — columns where summing across rows makes business sense.
+- Use "count" for stat cards showing number of records only (no yAxis needed).
+- RULE OF THUMB: If the column represents something measured per person/item/record, use "avg". If summing all values together produces a meaningful business total, use "sum".
+- NEVER use "sum" on columns like: BMI, height, weight, age, temperature, score, rating, price, cost_per, calories, intake, satisfaction, risk, rate, percent.
+- NEVER use "sum" on a column whose values are between 0 and 1.
+
+CHART QUALITY RULES — charts must provide insight:
+- Do NOT create a bar chart where all category averages would be nearly equal. If a numeric column has similar values across all categories of the xAxis column, SKIP that combination and pick different columns.
+- Prefer charts that reveal DIFFERENCES, TRENDS, or SURPRISING PATTERNS.
+- Prefer xAxis columns from the "flatColumns" list LESS — those have even distributions that make flat/boring charts.
+- Chart titles should communicate the INSIGHT, not just the axes. Examples:
+  BAD: "Caloric Intake by Health Status"
+  GOOD: "Obese Individuals Consume 27% More Calories on Average"
+  BAD: "Average BMI by Diet Type"
+  GOOD: "BMI Is Nearly Identical Across All Diet Types"
+- If column pairs exist (target vs actual, required vs consumed), create a comparison chart showing the gap/difference.
+
+Stat card rules:
+- Use aggregation "avg" for: risk scores, percentages, rates, satisfaction scores, performance scores, any column where values are between 0–1 or 0–100, or titles containing "average"/"mean", or any per-person measurement like BMI, calories, etc.
 - Use aggregation "sum" for: total salary, total revenue, total quantity, total spend — only when the title implies a total
 - Use aggregation "count" for row-count stat cards only (no yAxis)
-- Never use "sum" on a column whose values are decimals between 0 and 1 (e.g. risk index 0.50)
 
+Chart type rules:
 - Bar charts: xAxis must be a categorical column with 2–20 unique values
 - Line/area charts: xAxis must be the date column only
 - Pie charts: only if xAxis column has 2–6 unique values, never more
@@ -183,13 +215,6 @@ Stat card aggregation rules (critical):
 - yAxis must always be a numeric column for bar/line/area/scatter
 - Sort preference: most impactful/interesting charts first
 - Use only column names from the schema
-
-Aggregation rules — follow strictly:
-- Use "avg" for: risk scores, performance scores, satisfaction scores, demand scores, any column where values are between 0–1 or 0–100, growth rates, ratios, indexes
-- Use "sum" for: salary totals, revenue, quantity, count-based columns
-- Use "count" for: stat cards showing number of records only
-- NEVER use "sum" on a column whose values are between 0 and 1
-- NEVER use "sum" on columns named: risk, score, rate, ratio, index, satisfaction, performance, demand, growth, percent, pct
 
 Return ONLY valid JSON. No markdown. No explanation.
 First character must be { and last must be }`
@@ -249,7 +274,7 @@ export async function generateAiPayload(
 ): Promise<GenerateAiResult> {
   const datasetType = classifyDatasetType(schema)
   const context = buildEnrichedContext(schema, rows, datasetTypeLabel(datasetType))
-  
+
   if (computedStats && computedStats.columns) {
     context.columnStats = computedStats.columns
   }

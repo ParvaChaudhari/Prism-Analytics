@@ -21,8 +21,10 @@ function aggregate(nums: number[], mode: ChartConfig['aggregation']): number {
     case 'max':
       return Math.max(...nums)
     case 'sum':
-    default:
       return nums.reduce((a, b) => a + b, 0)
+    case 'avg':
+    default:
+      return nums.reduce((a, b) => a + b, 0) / nums.length
   }
 }
 
@@ -69,7 +71,13 @@ export function buildChartSeries(
   chartType: ChartType,
   config: ChartConfig
 ): Array<Record<string, string | number>> {
-  const { xAxis, yAxis, groupBy, aggregation = 'sum' } = config
+  let { xAxis, yAxis, groupBy, aggregation = 'sum' } = config
+  if (yAxis && aggregation !== 'count') {
+    const isNumeric = rows.slice(0, 10).some(r => toNumber(r[yAxis]) !== null)
+    if (!isNumeric) {
+      aggregation = 'count'
+    }
+  }
   const granularity =
     config.granularity && config.granularity !== 'auto'
       ? config.granularity
@@ -144,9 +152,9 @@ export function buildChartSeries(
       if (!iso) continue
       const bucket = bucketDate(iso, bucketGranularity)
       if (!bucketMap.has(bucket)) bucketMap.set(bucket, [])
-      if (yAxis) {
+      if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
         const n = toNumber(row[yAxis])
-        if (n !== null) bucketMap.get(bucket)!.push(n)
+        bucketMap.get(bucket)!.push(n !== null ? n : 1)
       } else {
         bucketMap.get(bucket)!.push(1)
       }
@@ -170,9 +178,9 @@ export function buildChartSeries(
       if (!bucketMap.has(key)) bucketMap.set(key, new Map())
       const gMap = bucketMap.get(key)!
       if (!gMap.has(group)) gMap.set(group, [])
-      if (yAxis) {
+      if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
         const n = toNumber(row[yAxis])
-        if (n !== null) gMap.get(group)!.push(n)
+        gMap.get(group)!.push(n !== null ? n : 1)
       } else {
         gMap.get(group)!.push(1)
       }
@@ -204,9 +212,9 @@ export function buildChartSeries(
   for (const row of rows) {
     const key = String(row[xAxis] ?? '(empty)')
     if (!groups.has(key)) groups.set(key, [])
-    if (yAxis) {
+    if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
       const n = toNumber(row[yAxis])
-      if (n !== null) groups.get(key)!.push(n)
+      groups.get(key)!.push(n !== null ? n : 1)
     } else {
       groups.get(key)!.push(1)
     }
