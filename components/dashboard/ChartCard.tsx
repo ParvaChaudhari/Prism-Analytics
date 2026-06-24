@@ -2,10 +2,9 @@
 
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
-// Card import removed in favor of standard div
 import { Badge } from '@/components/ui/Badge'
 import { ChartRenderer } from '@/components/dashboard/ChartRenderer'
-import type { ChartConfig, ChartType } from '@/types/dashboard'
+import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
 
 export function ChartCard({
   id,
@@ -22,7 +21,7 @@ export function ChartCard({
   title: string
   chartType: ChartType
   config: ChartConfig
-  series?: Array<Record<string, string | number>>
+  series?: ChartDataPoint[]
   isManual?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void

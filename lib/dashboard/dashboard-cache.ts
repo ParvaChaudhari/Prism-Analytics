@@ -1,5 +1,5 @@
 import type { ChartItem } from '@/components/dashboard/ChartGrid'
-import type { Insight } from '@/types/dashboard'
+import type { Insight, ChartDataPoint } from '@/types/dashboard'
 
 export type CachedDashboard = {
   dashboard: {
@@ -10,7 +10,7 @@ export type CachedDashboard = {
   }
   charts: ChartItem[]
   columns: string[]
-  chartData: Record<string, Array<Record<string, string | number>>>
+  chartData: Record<string, ChartDataPoint[]>
   savedAt: number
 }
 

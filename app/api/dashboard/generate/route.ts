@@ -57,8 +57,26 @@ async function insertAiCharts(
   return charts ?? []
 }
 
+import { checkRateLimit } from '@/lib/rate-limit'
+
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown'
+    const rateLimit = checkRateLimit(ip)
+
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimit.limit.toString(),
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          },
+        }
+      )
+    }
+
     const supabase = await createUserClient()
     const {
       data: { user },

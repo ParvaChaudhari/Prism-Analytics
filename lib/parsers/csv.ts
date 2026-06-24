@@ -16,6 +16,11 @@ export async function parseCsvFile(
     header: true,
     skipEmptyLines: true,
     dynamicTyping: false,
+    transformHeader: (header: string) => {
+      let clean = header.trim().slice(0, 40)
+      clean = clean.replace(/[<>{}\[\]`*]/g, '') // strip markdown/code blocks
+      return clean || 'Column'
+    },
   })
 
   if (parsed.errors?.length) {

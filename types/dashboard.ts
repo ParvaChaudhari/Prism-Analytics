@@ -50,3 +50,11 @@ export type StoredDashboard = {
   ai_insights: Insight[]
   dataset_id: string
 }
+
+export interface ChartDataPoint {
+  name: string
+  value?: number | string
+  x?: number
+  y?: number
+  [key: string]: string | number | undefined
+}

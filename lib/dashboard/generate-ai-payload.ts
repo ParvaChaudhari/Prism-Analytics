@@ -7,6 +7,8 @@ import { dedupeCharts, dropEmptyCharts, validateChart } from '@/lib/dashboard/va
 import { removeFlatCharts } from '@/lib/dashboard/chart-quality'
 import type { DatasetSchema } from '@/lib/parsers/schema'
 import type { DashboardPayload, GeneratedChart, Insight } from '@/types/dashboard'
+import { DashboardPayloadSchema } from '@/lib/dashboard/schema'
+import { z } from 'zod'
 
 export type GenerateAiResult = DashboardPayload & {
   aiNotice?: string
@@ -219,16 +221,50 @@ Chart type rules:
 Return ONLY valid JSON. No markdown. No explanation.
 First character must be { and last must be }`
 
-  const { data, meta } = await generateJsonObject(prompt, {
-    feature: 'dashboard_generation',
-    json: true,
-    userId,
-  })
+  let attemptPrompt = prompt
+  let lastNotice: string | undefined
+  let lastModelUsed: string | undefined
+  let parsedPayload: DashboardPayload | null = null
+
+  // Max 3 attempts (1 initial + 2 retries)
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { data, meta } = await generateJsonObject(attemptPrompt, {
+      feature: 'dashboard_generation',
+      json: true,
+      userId,
+    })
+
+    lastNotice = meta.notice
+    lastModelUsed = meta.modelUsed
+
+    try {
+      // 1. Strict Zod schema validation
+      const zodParsed = DashboardPayloadSchema.parse(data)
+      
+      // 2. Business logic normalization (validating against dataset schema)
+      parsedPayload = normalizePayload(zodParsed, context.schema.columns, rows, context.schema.rowCount)
+      
+      if (parsedPayload) {
+        break // Success!
+      } else {
+        throw new Error('Normalized payload was empty (all charts were dropped due to invalid columns).')
+      }
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        const issues = err.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+        console.warn(`[Attempt ${attempt}] Zod validation failed:`, issues)
+        attemptPrompt = prompt + `\n\nCRITICAL: Your previous JSON failed strict schema validation. Fix these structural errors: ${issues}`
+      } else {
+        console.warn(`[Attempt ${attempt}] Normalization failed:`, err.message)
+        attemptPrompt = prompt + `\n\nCRITICAL: Your previous JSON was structurally valid, but the charts used columns that do not exist or were invalid for the chart type. Please only use columns from the provided schema.`
+      }
+    }
+  }
 
   return {
-    payload: normalizePayload(data, context.schema.columns, rows, context.schema.rowCount),
-    notice: meta.notice,
-    modelUsed: meta.modelUsed,
+    payload: parsedPayload,
+    notice: lastNotice,
+    modelUsed: lastModelUsed,
   }
 }
 

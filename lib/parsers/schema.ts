@@ -1,4 +1,4 @@
-export type InferredType = 'number' | 'boolean' | 'date' | 'string' | 'unknown'
+export type InferredType = 'number' | 'boolean' | 'date' | 'string' | 'list' | 'unknown'
 
 export type ColumnSchema = {
   name: string
@@ -63,6 +63,15 @@ function looksLikeDate(v: unknown): boolean {
   return false
 }
 
+function looksLikeList(v: unknown): boolean {
+  if (typeof v !== 'string') return false
+  const s = v.trim()
+  if (!s.includes(',')) return false
+  if (looksNumber(s)) return false
+  if (looksLikeDate(s)) return false
+  return true
+}
+
 function inferType(values: unknown[]): InferredType {
   const candidates = values.filter((v) => !isNullish(v)).slice(0, 50)
   if (!candidates.length) return 'string'
@@ -72,6 +81,7 @@ function inferType(values: unknown[]): InferredType {
   let numCount = 0
   let boolCount = 0
   let dateCount = 0
+  let listCount = 0
 
   for (const v of candidates) {
     if (looksLikeDate(v)) {
@@ -80,12 +90,15 @@ function inferType(values: unknown[]): InferredType {
       numCount++
     } else if (looksBoolean(v)) {
       boolCount++
+    } else if (looksLikeList(v)) {
+      listCount++
     }
   }
 
   if (dateCount >= threshold) return 'date'
   if (numCount >= threshold) return 'number'
   if (boolCount >= threshold) return 'boolean'
+  if (listCount >= Math.max(1, Math.floor(candidates.length * 0.5))) return 'list' // Lists only need 50% threshold
   return 'string'
 }
 

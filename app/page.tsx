@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import Link from 'next/link'
+import { loginAsGuest } from '@/app/actions'
 
 export default function LandingPage() {
   return (
@@ -14,10 +15,7 @@ export default function LandingPage() {
               href="/login"
               className="text-sm font-medium text-text-secondary hover:text-primary transition-colors"
             >
-              Log in
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Get Started</Button>
+              Admin Login
             </Link>
           </div>
         </div>
@@ -33,19 +31,18 @@ export default function LandingPage() {
             <span className="ai-gradient-text">beautifully clear.</span>
           </h1>
           <p className="text-lg md:text-xl text-text-secondary mb-10 max-w-2xl mx-auto">
-            Upload any CSV or Excel file. Prism cleans your data, analyzes it, and generates an
-            interactive dashboard in seconds.
+            A portfolio demonstration powered by <b>Next.js</b> and <b>Google Gemini AI</b>. Upload any CSV file to instantly clean data and generate interactive dashboards.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/signup">
-              <Button size="lg" className="gap-2 w-full sm:w-auto">
-                Start for free
+            <form action={loginAsGuest}>
+              <Button type="submit" size="lg" className="gap-2 w-full sm:w-auto shadow-md">
+                Try it out (Demo)
                 <Icon name="arrow_forward" size={18} />
               </Button>
-            </Link>
+            </form>
             <Link href="/login">
               <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                View demo
+                Admin Login
               </Button>
             </Link>
           </div>

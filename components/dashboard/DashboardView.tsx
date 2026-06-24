@@ -8,6 +8,7 @@ import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { AddChartModal } from '@/components/dashboard/AddChartModal'
 import { StoryModal } from '@/components/dashboard/StoryModal'
+import { VirtualizedTable } from '@/components/dashboard/VirtualizedTable'
 import { ChatPanel } from '@/components/chat/ChatPanel'
 import { exportDashboardPdf } from '@/lib/dashboard/export-pdf'
 import {
@@ -17,7 +18,7 @@ import {
 } from '@/lib/dashboard/dashboard-cache'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Card } from '@/components/ui/Card'
-import type { Insight } from '@/types/dashboard'
+import type { Insight, ChartDataPoint } from '@/types/dashboard'
 
 type ApiDashboard = {
   id: string
@@ -29,7 +30,7 @@ type ApiDashboard = {
 async function fetchChartData(datasetId: string) {
   const res = await fetch(`/api/dashboard/${datasetId}/chart-data`)
   const data = (await res.json()) as {
-    chartData?: Record<string, Array<Record<string, string | number>>>
+    chartData?: Record<string, ChartDataPoint[]>
     columns?: string[]
     error?: string
   }
@@ -51,13 +52,43 @@ export function DashboardView() {
   const [dashboard, setDashboard] = useState<ApiDashboard | null>(null)
   const [charts, setCharts] = useState<ChartItem[]>([])
   const [columns, setColumns] = useState<string[]>([])
-  const [chartData, setChartData] = useState<
-    Record<string, Array<Record<string, string | number>>>
-  >({})
+  const [chartData, setChartData] = useState<Record<string, ChartDataPoint[]>>({})
   const [modalOpen, setModalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
 
   const [storyOpen, setStoryOpen] = useState(false)
+
+  const [activeView, setActiveView] = useState<'charts' | 'data'>('charts')
+  const [rawData, setRawData] = useState<Array<Record<string, string | number>>>([])
+  const [rawDataLoading, setRawDataLoading] = useState(false)
+  const [rawDataLoaded, setRawDataLoaded] = useState(false)
+
+  const fetchRawData = useCallback(async () => {
+    if (rawDataLoaded || !datasetId) return
+    setRawDataLoading(true)
+    try {
+      const res = await fetch(`/api/dashboard/${datasetId}/raw-data`)
+      const data = await res.json()
+      if (res.ok) {
+        setRawData(data.rows || [])
+      } else {
+        throw new Error(data.error)
+      }
+    } catch (err: any) {
+      console.error(err)
+      setError('Failed to load raw data')
+    } finally {
+      setRawDataLoading(false)
+      setRawDataLoaded(true)
+    }
+  }, [datasetId, rawDataLoaded])
+
+  const handleViewChange = useCallback((view: 'charts' | 'data') => {
+    setActiveView(view)
+    if (view === 'data' && !rawDataLoaded) {
+      fetchRawData()
+    }
+  }, [rawDataLoaded, fetchRawData])
 
   const loadChartData = useCallback(
     async (
@@ -313,32 +344,35 @@ export function DashboardView() {
 
   return (
     <>
-      <div
-        className={[
-          'page-container pt-4 pb-6 max-w-[var(--container-max)] flex flex-col gap-4 transition-[padding] duration-300',
-          chatOpen ? 'lg:pr-[420px]' : '',
-        ].join(' ')}
-      >
+      <div className="flex-1 flex flex-col min-h-0 page-container max-w-[var(--container-max)] py-6 gap-6 relative">
         <DashboardHeader
-          title={dashboard.title}
+          title={dashboard?.title ?? 'Loading Dashboard...'}
           onAskAi={() => setChatOpen(true)}
-
-          onStory={() => setStoryOpen(true)}
-          onExport={handleExport}
           onAddChart={() => setModalOpen(true)}
           onRegenerate={handleRegenerate}
+          onStory={() => setStoryOpen(true)}
+          onExport={handleExport}
           regenerating={regenerating}
           exporting={exporting}
-          summary={dashboard.ai_summary}
+          summary={dashboard?.ai_summary}
+          activeView={activeView}
+          onViewChange={handleViewChange}
         />
 
-        {error ? (
-          <Card className="p-4 text-sm text-destructive border border-destructive/20 bg-destructive/10">
-            {error}
-          </Card>
-        ) : null}
+      <div ref={exportRef} className="flex-1 flex flex-col gap-6 min-h-0 bg-background">
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100 flex items-center justify-between">
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-500 hover:text-red-700 font-medium"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
-        <div ref={exportRef} className="flex flex-col gap-6">
+        {activeView === 'charts' ? (
           <ChartGrid
             charts={charts}
             chartData={chartData}
@@ -346,9 +380,21 @@ export function DashboardView() {
             onDelete={handleDelete}
             onTitleChange={handleTitleChange}
           />
-        </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0">
+            {rawDataLoading ? (
+              <div className="flex-1 flex flex-col gap-4">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="flex-1 w-full rounded-xl" />
+              </div>
+            ) : (
+              <VirtualizedTable data={rawData} columns={columns} />
+            )}
+          </div>
+        )}
+      </div>
 
-        <AddChartModal
+      <AddChartModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           datasetId={datasetId}

@@ -19,20 +19,20 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { ChartConfig, ChartType } from '@/types/dashboard'
+import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
 import { buildChartSeries } from '@/lib/dashboard/chart-data'
 import { formatStatValue } from '@/lib/dashboard/format-stat'
 
 const COLORS = ['#000000', '#005ab7', '#0372e4', '#8E2DE2', '#6E6E73', '#4A90E2']
 
-function formatTooltipValue(v: any) {
+function formatTooltipValue(v: unknown) {
   if (typeof v === 'number') {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(v)
   }
   return String(v)
 }
 
-function seriesKeysFromData(data: Array<Record<string, string | number>>): string[] {
+function seriesKeysFromData(data: ChartDataPoint[]): string[] {
   if (!data.length) return ['value']
   const first = data[0]
   if ('value' in first && typeof first.value === 'number') return ['value']
@@ -49,7 +49,7 @@ export function ChartRenderer({
 }: {
   chartType: ChartType
   config: ChartConfig
-  series?: Array<Record<string, string | number>>
+  series?: ChartDataPoint[]
   rows?: Array<Record<string, unknown>>
   accent?: string
   tall?: boolean
@@ -76,7 +76,7 @@ export function ChartRenderer({
   }
 
   if (chartType === 'pie') {
-    const pieData = data.map((d: any) => ({
+    const pieData = data.map((d) => ({
       ...d,
       value: Number(d.value ?? d.y) || 0
     }))

@@ -57,6 +57,15 @@ export async function POST(request: Request) {
     )
   }
 
+  // Prevent OOM by explicitly rejecting files larger than 3MB 
+  // before reading the Blob into an ArrayBuffer in memory
+  if (fileData.size > 3 * 1024 * 1024) {
+    return NextResponse.json(
+      { error: 'File too large to parse (max 3MB)' },
+      { status: 400 }
+    )
+  }
+
   const buffer = await fileData.arrayBuffer()
 
   let rows: Array<Record<string, unknown>> = []
