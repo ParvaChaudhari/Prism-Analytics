@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { DashboardPreviewCard } from '@/components/dashboard/DashboardPreviewCard'
+import { DeleteDatasetButton } from '@/components/dashboard/DeleteDatasetButton'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -47,7 +48,7 @@ export default async function HomePage() {
     <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-[32px] font-semibold text-primary tracking-tight mb-2">Dashboards</h1>
+          <h1 className="text-[32px] font-semibold text-primary tracking-tight mb-2">Your Datasets</h1>
           <p className="text-text-secondary">
             {user?.email ? `Welcome back — ${user.email}` : 'Your AI-generated analytics at a glance.'}
           </p>
@@ -67,23 +68,26 @@ export default async function HomePage() {
             const rowCount = d.row_count ?? 0
             const dashboardTitle = d.dashboards?.[0]?.title
             return (
-              <Link key={d.id} href={`/dashboard/${d.id}`} className="group">
-                <Card className="p-0 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
-                  <DashboardPreviewCard title={dashboardTitle || filename} />
-                  <div className="p-5 flex flex-col gap-2 flex-1">
-                    <h3 className="font-semibold text-primary truncate group-hover:text-secondary transition-colors">
-                      {dashboardTitle || 'Untitled dashboard'}
-                    </h3>
-                    <p className="text-sm text-text-secondary truncate">{filename}</p>
-                    <div className="flex items-center gap-2 mt-auto pt-2">
-                      <Badge variant="secondary">{rowCount.toLocaleString()} rows</Badge>
-                      <span className="text-xs text-text-tertiary">
-                        {new Date(d.created_at).toLocaleDateString()}
-                      </span>
+              <div key={d.id} className="relative group">
+                <DeleteDatasetButton datasetId={d.id} />
+                <Link href={`/dashboard/${d.id}`} className="block h-full">
+                  <Card className="p-0 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
+                    <DashboardPreviewCard title={dashboardTitle || filename} />
+                    <div className="p-5 flex flex-col gap-2 flex-1">
+                      <h3 className="font-semibold text-primary truncate group-hover:text-secondary transition-colors pr-8">
+                        {dashboardTitle || 'Untitled dashboard'}
+                      </h3>
+                      <p className="text-sm text-text-secondary truncate">{filename}</p>
+                      <div className="flex items-center gap-2 mt-auto pt-2">
+                        <Badge variant="secondary">{rowCount.toLocaleString()} rows</Badge>
+                        <span className="text-xs text-text-tertiary">
+                          {new Date(d.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              </Link>
+                  </Card>
+                </Link>
+              </div>
             )
           })}
         </div>

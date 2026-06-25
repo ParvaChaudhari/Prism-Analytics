@@ -15,7 +15,7 @@ export default function LandingPage() {
               href="/login"
               className="text-sm font-medium text-text-secondary hover:text-primary transition-colors"
             >
-              Admin Login
+              Login
             </Link>
           </div>
         </div>
@@ -42,7 +42,7 @@ export default function LandingPage() {
             </form>
             <Link href="/login">
               <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                Admin Login
+                Login
               </Button>
             </Link>
           </div>

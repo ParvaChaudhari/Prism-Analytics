@@ -23,14 +23,19 @@ export function AppNav() {
   const router = useRouter()
   const [datasets, setDatasets] = useState<Dataset[]>([])
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const accountDropdownRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false)
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setAccountDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -40,6 +45,7 @@ export function AppNav() {
   // Close dropdown on route change
   useEffect(() => {
     setDropdownOpen(false)
+    setAccountDropdownOpen(false)
   }, [pathname])
 
   async function openDatasets() {
@@ -182,13 +188,35 @@ export function AppNav() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-4">
-          <div
-            className="w-8 h-8 rounded-full bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary"
-            aria-hidden
+        <div className="flex items-center gap-4 relative" ref={accountDropdownRef}>
+          <button
+            onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+            className="w-8 h-8 rounded-full bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary hover:bg-surface-container transition-colors"
+            aria-label="Account menu"
           >
             <Icon name="account_circle" size={22} />
-          </div>
+          </button>
+
+          {accountDropdownOpen && (
+            <div className="absolute top-full right-0 mt-3 w-48 bg-white border border-border-subtle rounded-xl shadow-xl overflow-hidden z-50 p-2">
+              {/* Arrow */}
+              <div className="absolute -top-1.5 right-3 w-3 h-3 bg-white border-l border-t border-border-subtle rotate-45" />
+
+              <button
+                onClick={async () => {
+                  setAccountDropdownOpen(false)
+                  const { createClient } = await import('@/lib/supabase/client')
+                  const supabase = createClient()
+                  await supabase.auth.signOut()
+                  router.push('/')
+                }}
+                className="relative w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-container-low transition-colors text-[13px] font-medium text-red-600 hover:text-red-700"
+              >
+                <Icon name="logout" size={16} />
+                Log out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
