@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Sparkles, GripVertical } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { ChartRenderer } from '@/components/dashboard/ChartRenderer'
 import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
@@ -15,6 +15,7 @@ export function ChartCard({
   isManual,
   onDelete,
   onTitleChange,
+  onAskAboutChart,
   tall,
 }: {
   id: string
@@ -25,9 +26,9 @@ export function ChartCard({
   isManual?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void
+  onAskAboutChart?: (chartId: string) => void
   tall?: boolean
 }) {
-  const description = config.description ?? ''
   const [editing, setEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(title)
 
@@ -35,6 +36,14 @@ export function ChartCard({
     const next = draftTitle.trim()
     if (next && next !== title) onTitleChange?.(id, next)
     setEditing(false)
+  }
+
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
+    e.dataTransfer.effectAllowed = 'copy'
+    e.dataTransfer.setData(
+      'application/prism-chart',
+      JSON.stringify({ chartId: id, title, chartType, config })
+    )
   }
 
   const isStat = chartType === 'stat'
@@ -47,23 +56,45 @@ export function ChartCard({
 
   return (
     <div
-      className={`glass-card group relative ${isStat
+      draggable
+      onDragStart={handleDragStart}
+      className={`glass-card group relative cursor-grab active:cursor-grabbing ${
+        isStat
           ? 'rounded-xl px-4 py-3 flex flex-col justify-between h-full'
           : 'rounded-xl p-4 flex flex-col gap-3 h-full'
-        }`}
+      }`}
     >
+      {/* Drag handle hint */}
+      <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-40 transition-opacity text-text-secondary pointer-events-none">
+        <GripVertical size={14} />
+      </div>
+
+      {/* Ask AI button */}
+      {onAskAboutChart && !isStat && (
+        <button
+          type="button"
+          onClick={() => onAskAboutChart(id)}
+          className="absolute top-4 right-10 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-surface text-text-secondary hover:text-ai-accent"
+          aria-label="Ask AI about this chart"
+          title="Ask AI about this chart"
+        >
+          <Sparkles size={14} />
+        </button>
+      )}
+
+      {/* Delete button */}
       {onDelete ? (
         <button
           type="button"
           onClick={() => onDelete(id)}
-          className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-full hover:bg-surface text-text-secondary hover:text-destructive"
+          className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-surface text-text-secondary hover:text-destructive"
           aria-label="Delete chart"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
         </button>
       ) : null}
 
-      <div className="flex flex-col gap-1 pr-8">
+      <div className="flex flex-col gap-1 pr-8 pl-4">
         <div className="flex items-center gap-2 flex-wrap">
           {editing ? (
             <input
@@ -98,14 +129,13 @@ export function ChartCard({
             </Badge>
           )}
         </div>
-        {/* Per-chart descriptions removed to keep the dashboard clean */}
       </div>
+
       <div className="w-full relative">
         <ChartRenderer
           chartType={chartType}
           config={config}
           series={series}
-          // pick accent color per chart based on title
           accent={pickAccent(title)}
           tall={tall}
         />

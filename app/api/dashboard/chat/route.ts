@@ -4,54 +4,50 @@ import { modelForFeature } from '@/lib/gemini-models'
 import { logAiUsage } from '@/lib/gemini-quota'
 import { createClient as createUserClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { buildSchemaFromRows } from '@/lib/parsers/schema'
 import type { ChatMessage } from '@/types/chat'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const MAX_SAMPLE_ROWS = 100
+type ChartContext = {
+  chartId: string
+  chartTitle: string
+  chartType: string
+  data: Array<Record<string, unknown>>
+}
 
 type PostBody = {
   dashboardId: string
   message: string
   conversationId?: string
+  chartContext?: ChartContext
 }
 
-async function loadDashboardContext(admin: ReturnType<typeof createAdminClient>, dashboardId: string, userId: string) {
-  const { data: dashboard, error } = await admin
-    .from('dashboards')
-    .select('id, title, ai_summary, ai_insights, dataset_id')
-    .eq('id', dashboardId)
-    .eq('user_id', userId)
-    .single()
+function buildPrompt(message: string, chartContext: ChartContext | undefined, history: ChatMessage[]): string {
+  const historyText = history
+    .slice(-10)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+    .join('\n\n')
 
-  if (error || !dashboard) return null
-
-  const { data: dataset } = await admin
-    .from('datasets')
-    .select('upload_id, cleaned_data, raw_schema')
-    .eq('id', dashboard.dataset_id)
-    .eq('user_id', userId)
-    .single()
-
-  const { data: upload } = await admin
-    .from('uploads')
-    .select('computed_stats')
-    .eq('id', dataset?.upload_id)
-    .single()
-
-  const rows = (dataset?.cleaned_data as Array<Record<string, unknown>>) ?? []
-  const schema =
-    (dataset?.raw_schema as ReturnType<typeof buildSchemaFromRows>) ??
-    buildSchemaFromRows(rows)
-
-  return {
-    dashboard,
-    schema,
-    sampleData: rows.slice(0, MAX_SAMPLE_ROWS),
-    computedStats: upload?.computed_stats,
+  if (!chartContext) {
+    return `The user has asked: "${message}"
+    
+Please tell them they need to drop a chart from the dashboard into the chat panel first before asking a question. Be friendly and brief.`
   }
+
+  return `You are a precise data analyst assistant. The user is asking about a "${chartContext.chartType}" chart titled "${chartContext.chartTitle}".
+
+The chart contains the following data points (this is the complete data — do not reference any data outside of this):
+${JSON.stringify(chartContext.data, null, 2)}
+
+Rules:
+- Answer using ONLY the data above. Never invent numbers.
+- If asked for max, min, average, total — compute it from the data points above.
+- Keep answers concise and friendly. Use bullet points for lists.
+- If the question cannot be answered from the chart data alone, say so clearly.
+- Do not mention "JSON" or "data points" — refer to them naturally as values in the chart.
+
+${historyText ? `Conversation so far:\n${historyText}\n\n` : ''}User: ${message}`
 }
 
 export async function GET(request: Request) {
@@ -67,8 +63,18 @@ export async function GET(request: Request) {
   }
 
   const admin = createAdminClient()
-  const ctx = await loadDashboardContext(admin, dashboardId, user.id)
-  if (!ctx) return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 })
+
+  // Verify user owns this dashboard
+  const { data: dashboard, error: dashError } = await admin
+    .from('dashboards')
+    .select('id')
+    .eq('id', dashboardId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (dashError || !dashboard) {
+    return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 })
+  }
 
   const { data: conversation } = await admin
     .from('conversations')
@@ -97,8 +103,18 @@ export async function POST(request: Request) {
     }
 
     const admin = createAdminClient()
-    const ctx = await loadDashboardContext(admin, body.dashboardId, user.id)
-    if (!ctx) return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 })
+
+    // Verify user owns this dashboard (lightweight check, no heavy DB joins)
+    const { data: dashboard, error: dashError } = await admin
+      .from('dashboards')
+      .select('id')
+      .eq('id', body.dashboardId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (dashError || !dashboard) {
+      return NextResponse.json({ error: 'Dashboard not found' }, { status: 404 })
+    }
 
     let conversationId = body.conversationId
     let messages: ChatMessage[] = []
@@ -140,35 +156,18 @@ export async function POST(request: Request) {
       role: 'user',
       content: body.message.trim(),
       timestamp: new Date().toISOString(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      attachedChart: body.chartContext as any,
     }
     messages = [...messages, userMessage]
 
-    const historyText = messages
-      .slice(-10)
-      .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-      .join('\n\n')
-
-    const prompt = `You are a data analyst assistant. Answer questions about this dataset accurately.
-Dataset stats (computed from full dataset — these are exact values, not estimates):
-${JSON.stringify(ctx.computedStats, null, 2)}
-
-Dataset schema: ${JSON.stringify(ctx.schema)}
-Dashboard insights already shown: ${ctx.dashboard.ai_summary}
-
-Answer concisely. If asked for averages or totals use the exact values above.
-If the question implies a chart, describe what chart would show that. Use plain language — the user may not be technical. Never make up numbers not present in the stats.
-
-Conversation so far:
-${historyText}
-
-Respond to the latest user message only.`
-
+    const prompt = buildPrompt(body.message.trim(), body.chartContext, messages.slice(0, -1))
     const chatModel = modelForFeature('chat')
 
     const stream = await ai.models.generateContentStream({
       model: chatModel,
       contents: prompt,
-      config: { temperature: 0.3 },
+      config: { temperature: 0.2 },
     })
 
     const encoder = new TextEncoder()

@@ -70,7 +70,7 @@ export function AppNav() {
   const isUploadActive = pathname === '/upload' || pathname.startsWith('/health')
 
   return (
-    <header className="glass-nav sticky top-0 z-40 w-full">
+    <header className="bg-white border-b border-border-subtle sticky top-0 z-40 w-full">
       <div className="page-container flex h-12 items-center justify-between max-w-[var(--container-max)]">
         <div className="flex h-full gap-8 md:gap-12">
           <Link href="/home" className="self-center text-[18px] font-bold tracking-tight text-primary">
