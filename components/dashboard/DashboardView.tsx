@@ -17,6 +17,7 @@ import {
 } from '@/lib/dashboard/dashboard-cache'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { Card } from '@/components/ui/Card'
+import { GalaxyLoading } from '@/components/ui/GalaxyLoading'
 import type { Insight, ChartDataPoint } from '@/types/dashboard'
 
 type ApiDashboard = {
@@ -318,19 +319,8 @@ export function DashboardView() {
 
   if (shellLoading || generating) {
     return (
-      <div className="page-container py-8 flex flex-col gap-6">
-        <Card className="p-8 flex flex-col gap-4">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <p className="text-sm text-text-secondary pt-2">
-            {generating ? 'Prism is reading your data…' : 'Loading dashboard…'}
-          </p>
-        </Card>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-80 rounded-xl" />
-          <Skeleton className="h-80 rounded-xl" />
-        </div>
+      <div className="flex-1 w-full flex flex-col">
+        <GalaxyLoading text={generating ? 'Prism is reading your data…' : 'Loading dashboard…'} />
       </div>
     )
   }

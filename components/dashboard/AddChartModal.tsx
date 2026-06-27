@@ -212,6 +212,9 @@ export function AddChartModal({ isOpen, onClose, datasetId, columns, schema, onC
           >
             {nlLoading ? 'Generating…' : 'Generate Chart'}
           </Button>
+          <p className="text-[11px] text-text-tertiary mt-2">
+            Magic AI is an early access feature and still improving.
+          </p>
           {error && <p className="text-sm text-destructive mt-2">{error}</p>}
         </div>
       )}

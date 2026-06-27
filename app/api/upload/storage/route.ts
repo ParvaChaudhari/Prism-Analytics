@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'File too large (max 50MB)' }, { status: 400 })
+    return NextResponse.json({ error: 'File too large (max 3MB)' }, { status: 400 })
   }
 
   const objectPath = `${user.id}/${crypto.randomUUID()}.${ext}`
