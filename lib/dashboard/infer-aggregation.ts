@@ -30,7 +30,7 @@ const AVG_ALWAYS = [
   'reliability', 'capacity', 'occupancy', 'density',
   // Financial per-unit
   'salary', 'wage', 'income', 'compensation', 'pay', 'earnings',
-  'price', 'cost', 'fee', 'tariff', 'premium',
+  'price', 'cost', 'fee', 'tariff', 'premium', 'charge', 'charges', 'deductible', 'copay', 'claim',
   'revenue_per', 'cost_per', 'value_per', 'average_order',
   'ltv', 'arpu',
   // Demand & forecast
@@ -59,8 +59,6 @@ export function inferAggregation(
   min?: number | null,
   schemaDefault?: 'sum' | 'avg' | 'count'
 ): 'avg' | 'sum' | 'count' {
-  if (schemaDefault) return schemaDefault
-
   const col = columnName.toLowerCase()
 
   // Explicit prefix overrides everything
@@ -72,6 +70,8 @@ export function inferAggregation(
 
   // Check sum keywords
   if (SUM_ALWAYS.some(k => col.includes(k))) return 'sum'
+
+  if (schemaDefault) return schemaDefault
 
   // Decimal scale 0-1 with no name match → avg
   const isDecimalScale = max != null && min != null && max <= 1.0 && min >= 0

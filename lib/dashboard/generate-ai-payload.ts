@@ -201,15 +201,18 @@ CHART QUALITY RULES — charts must provide insight:
   BAD: "Average BMI by Diet Type"
   GOOD: "BMI Is Nearly Identical Across All Diet Types"
 - If column pairs exist (target vs actual, required vs consumed), create a comparison chart showing the gap/difference.
+- Do NOT hallucinate correlation strength in scatter plot titles. Since you cannot calculate the exact r-value accurately, do NOT use words like "strong correlation", "moderate correlation", or "linear relationship" in the title. Use descriptive behavioral titles instead, e.g., "Charges Vary Widely Across All Ages" or "BMI Shows Only Weak Relationship With Cost".
+- Chart titles must accurately reflect the data — never round percentages down.
 
 Stat card rules:
 - Use aggregation "avg" for: risk scores, percentages, rates, satisfaction scores, performance scores, any column where values are between 0–1 or 0–100, or titles containing "average"/"mean", or any per-person measurement like BMI, calories, etc.
 - Use aggregation "sum" for: total salary, total revenue, total quantity, total spend — only when the title implies a total
-- Use aggregation "count" for row-count stat cards only (no yAxis)
+- Use aggregation "count" for row-count stat cards ONLY (e.g. "Total Records"). When creating a Total Records card, you MUST leave the yAxis field empty/null. DO NOT mistakenly select a random numeric column (like age or ID) and average/sum it. NEVER use "count" to count distinct categorical values (like "Total Studios" or "Total Genres") because the system cannot do distinct counts.
 
 Chart type rules:
 - Bar charts: xAxis must be a categorical column with 2–20 unique values
 - Line/area charts: xAxis must be the date column only
+- If a line/area chart is showing how many records exist over time (count of rows per year/month), use aggregation "count" and DO NOT set a yAxis — leave yAxis empty/null.
 - Pie charts: only if xAxis column has 2–6 unique values, never more
 - Scatter: only if two numeric columns have a meaningful relationship
 - DO NOT include groupBy in any chart — omit that field entirely

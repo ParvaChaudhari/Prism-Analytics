@@ -5,6 +5,9 @@ export function formatStatValue(value: number, columnName: string): string {
       .some(k => col.includes(k))) {
     return `$${Math.round(value).toLocaleString()}`
   }
+  if (col.includes('rating') || col.includes('score')) {
+    return value.toFixed(1)
+  }
   if (value >= 0 && value <= 1.0) return `${(value * 100).toFixed(1)}%`
   if (['growth', 'rate', 'percent', 'pct', 'ratio'].some(k => col.includes(k))) {
     return `${value.toFixed(1)}%`

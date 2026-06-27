@@ -25,6 +25,25 @@ import { formatStatValue } from '@/lib/dashboard/format-stat'
 
 const COLORS = ['#000000', '#005ab7', '#0372e4', '#8E2DE2', '#6E6E73', '#4A90E2']
 
+function formatAxisTick(v: any): string {
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`
+    if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`
+    if (v >= 1000 && (v < 1900 || v > 2100)) return `${(v / 1000).toFixed(0)}K`
+    return String(v)
+  }
+  // Try to parse large string numbers for categorical X-axes (e.g. IDs)
+  if (typeof v === 'string' && /^\d{4,}$/.test(v)) {
+    const n = Number(v)
+    if (Number.isFinite(n)) {
+      if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`
+      if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+      if (n >= 1000 && (n < 1900 || n > 2100)) return `${(n / 1000).toFixed(0)}K`
+    }
+  }
+  return String(v)
+}
+
 function formatTooltipValue(v: unknown) {
   if (typeof v === 'number') {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(v)
@@ -81,7 +100,7 @@ export function ChartRenderer({
       value: Number(d.value ?? d.y) || 0
     }))
     return (
-      <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
+      <ResponsiveContainer width="100%" height='100%'>
         <PieChart>
           <Pie
             data={pieData}
@@ -105,11 +124,11 @@ export function ChartRenderer({
 
   if (chartType === 'scatter') {
     return (
-      <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
+      <ResponsiveContainer width="100%" height='100%'>
         <ScatterChart>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
-          <XAxis dataKey="x" type="number" />
-          <YAxis dataKey="y" type="number" />
+          <XAxis dataKey="x" type="number" tickFormatter={formatAxisTick} />
+          <YAxis dataKey="y" type="number" tickFormatter={formatAxisTick} />
           <Tooltip formatter={formatTooltipValue} />
           <Scatter data={data} fill="#005ab7" isAnimationActive={false} />
         </ScatterChart>
@@ -125,11 +144,11 @@ export function ChartRenderer({
 
   if (chartType === 'line') {
     return (
-      <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
+      <ResponsiveContainer width="100%" height='100%'>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
-          <YAxis tick={{ fontSize: 12 }} />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} tickFormatter={formatAxisTick} interval="preserveStartEnd" height={60} />
+          <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisTick} />
           <Tooltip formatter={formatTooltipValue} />
           {isMulti ? <Legend /> : null}
           {keys.map((key, i) => (
@@ -150,11 +169,11 @@ export function ChartRenderer({
 
   if (chartType === 'area') {
     return (
-      <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
+      <ResponsiveContainer width="100%" height='100%'>
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
-          <XAxis dataKey="name" tick={{ fontSize: 12 }} interval="preserveStartEnd" height={60} />
-          <YAxis tick={{ fontSize: 12 }} />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} tickFormatter={formatAxisTick} interval="preserveStartEnd" height={60} />
+          <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisTick} />
           <Tooltip formatter={formatTooltipValue} />
           {isMulti ? <Legend /> : null}
           {keys.map((key, i) => (
@@ -176,18 +195,19 @@ export function ChartRenderer({
 
   // Default: bar chart
   return (
-    <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
+    <ResponsiveContainer width="100%" height='100%'>
       <BarChart data={data} barSize={36}>
         <CartesianGrid strokeDasharray="3 3" stroke="#E8E8ED" />
         <XAxis
           dataKey="name"
           tick={{ fontSize: 12 }}
+          tickFormatter={formatAxisTick}
           interval={0}
           angle={keys.length === 1 ? -20 : 0}
           textAnchor={keys.length === 1 ? 'end' : 'middle'}
           height={60}
         />
-        <YAxis tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 12 }} tickFormatter={formatAxisTick} />
         <Tooltip formatter={formatTooltipValue} />
         {isMulti ? <Legend /> : null}
         {keys.map((key, i) => (

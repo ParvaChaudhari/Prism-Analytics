@@ -22,6 +22,17 @@ export function validateChart(
   const xCol = chart.xAxis ? colMap.get(chart.xAxis) : undefined
   const yCol = chart.yAxis ? colMap.get(chart.yAxis) : undefined
 
+  // Drop charts that group by list-format columns (e.g. "['Drama', 'Fantasy']")
+  // Even a single bracketed string in the sample is definitive proof the column is list-formatted
+  if (xCol && xCol.type === 'string' && xCol.sample) {
+    const hasListFormat = xCol.sample.some((v: any) =>
+      typeof v === 'string' && v.trim().startsWith('[')
+    )
+    if (hasListFormat) {
+      return null
+    }
+  }
+
   if (['bar', 'line', 'area', 'scatter'].includes(chart.chart_type)) {
     if (!yCol || !NUMERIC_TYPES.has(yCol.type)) return null
   }
@@ -42,6 +53,11 @@ export function validateChart(
 
   if (chart.chart_type === 'pie' && xCol) {
     if (xCol.uniqueCount > 8) return null
+    const extendedXCol = xCol as any
+    if (extendedXCol.topValues && Array.isArray(extendedXCol.topValues)) {
+      const minShare = Math.min(...extendedXCol.topValues.map((v: any) => parseFloat(v.percent || '0')))
+      if (minShare < 3) return { ...chart, chart_type: 'bar' }
+    }
   }
 
   if (chart.chart_type === 'bar' && xCol) {
