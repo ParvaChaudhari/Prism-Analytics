@@ -8,9 +8,9 @@ export const GeneratedChartSchema = z.object({
   title: z.string(),
   description: z.string(),
   chart_type: ChartTypeSchema,
-  xAxis: z.string().optional(),
-  yAxis: z.string().optional(),
-  aggregation: ChartAggregationSchema.optional(),
+  xAxis: z.string().nullish(),
+  yAxis: z.string().nullish(),
+  aggregation: ChartAggregationSchema.nullish(),
 })
 
 export const InsightSchema = z.object({
