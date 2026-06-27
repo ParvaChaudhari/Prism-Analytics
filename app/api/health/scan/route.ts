@@ -287,8 +287,11 @@ Severity guide:
 - high: 20-50% nulls, major type issues, significant outliers
 
 - medium: 5-20% nulls, format inconsistencies, minor outliers
-
 - low: <5% nulls, cosmetic column name issues
+
+Specific rules to follow:
+- DO NOT flag columns containing "yes"/"no", "true"/"false", "y"/"n", or similar string binaries as type mismatches or format inconsistencies. Prism can handle string categoricals perfectly well. Converting them to boolean provides zero analytical benefit. Consider them completely healthy.
+- Focus ONLY on actual data dirtiness like nulls, massive outliers, inconsistent formatting (e.g. lists vs strings), or duplicate rows.
 
 
 

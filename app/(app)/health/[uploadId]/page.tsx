@@ -98,7 +98,7 @@ export default function HealthCheckPage() {
     }
 
     const data = (await res.json()) as { datasetId: string }
-    router.push(`/dashboard/${data.datasetId}`)
+    router.push(`/dashboard/${data.datasetId}?generate=true`)
   }
 
   function skipAll() {
@@ -140,6 +140,10 @@ export default function HealthCheckPage() {
             {issues.length
               ? 'Review each finding and choose how Prism should clean your data.'
               : 'No issues detected — you can continue to your dashboard.'}
+          </p>
+          <p className="text-xs text-text-tertiary mt-2 flex items-center gap-1.5">
+            <Icon name="info" size={14} />
+            Note: AI analysis may occasionally make mistakes. Please review the findings carefully.
           </p>
           {issues.length > 0 ? (
             <p className="text-sm text-text-tertiary mt-2">{progressText}</p>

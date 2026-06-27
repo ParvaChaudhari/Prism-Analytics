@@ -2,9 +2,13 @@ import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
 import { getOrdinalOrder, sortByOrdinal } from '@/lib/dashboard/ordinal-sort'
 
 function toNumber(v: unknown): number | null {
-  if (typeof v === 'number' && Number.isFinite(v)) return v
+  // Treat nullish and empty-string as missing — never coerce to 0
+  if (v === null || v === undefined || v === '') return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
   if (typeof v === 'string') {
-    const n = Number(v.replace(/[,$%]/g, ''))
+    const s = v.trim()
+    if (s === '' || s.toLowerCase() === 'null' || s.toLowerCase() === 'na') return null
+    const n = Number(s.replace(/[,$%]/g, ''))
     return Number.isFinite(n) ? n : null
   }
   return null
@@ -111,7 +115,10 @@ export function buildChartSeries(
   if (chartType === 'stat') {
     if (aggregation === 'count') return [{ name: 'Count', value: processedRows.length }]
     if (yAxis) {
-      const nums = processedRows.map((r) => toNumber(r[yAxis])).filter((n): n is number => n !== null)
+      // toNumber returns null for null/empty/missing values — no zeros will sneak in
+      const nums = processedRows
+        .map((r) => toNumber(r[yAxis]))
+        .filter((n): n is number => n !== null)
       return [{ name: yAxis, value: aggregate(nums, aggregation) }]
     }
     return [{ name: 'Rows', value: processedRows.length }]
@@ -177,9 +184,10 @@ export function buildChartSeries(
       if (!iso) continue
       const bucket = bucketDate(iso, bucketGranularity)
       if (!bucketMap.has(bucket)) bucketMap.set(bucket, [])
-      if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
+      if (yAxis && aggregation !== 'count' && yAxis !== xAxis) {
+        // toNumber returns null for empty/missing — skip those rows cleanly
         const n = toNumber(row[yAxis])
-        bucketMap.get(bucket)!.push(n !== null ? n : 1)
+        if (n !== null) bucketMap.get(bucket)!.push(n)
       } else {
         bucketMap.get(bucket)!.push(1)
       }
@@ -203,7 +211,7 @@ export function buildChartSeries(
       if (!bucketMap.has(key)) bucketMap.set(key, new Map())
       const gMap = bucketMap.get(key)!
       if (!gMap.has(group)) gMap.set(group, [])
-      if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
+      if (yAxis && aggregation !== 'count' && yAxis !== xAxis) {
         const n = toNumber(row[yAxis])
         gMap.get(group)!.push(n !== null ? n : 1)
       } else {
@@ -246,9 +254,10 @@ export function buildChartSeries(
     if (raw == null || raw === '' || String(raw).toLowerCase() === 'null') continue
     const key = String(raw)
     if (!groups.has(key)) groups.set(key, [])
-    if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
+    if (yAxis && aggregation !== 'count' && yAxis !== xAxis) {
+      // toNumber returns null for empty/missing — skip those rows cleanly
       const n = toNumber(row[yAxis])
-      groups.get(key)!.push(n !== null ? n : 1)
+      if (n !== null) groups.get(key)!.push(n)
     } else {
       groups.get(key)!.push(1)
     }
@@ -266,5 +275,5 @@ export function buildChartSeries(
   return (isOrdinal
     ? ordinalSorted
     : grouped.sort((a, b) => (b.value as number) - (a.value as number)))
-    .slice(0, 24)
+    .slice(0, chartType === 'bar' ? 10 : 24)
 }

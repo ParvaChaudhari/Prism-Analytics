@@ -94,7 +94,7 @@ export function ChartCard({
         </button>
       ) : null}
 
-      <div className="flex flex-col gap-1 pr-8 pl-4">
+      <div className={`flex flex-col gap-1 pr-8 ${isStat ? '' : 'pl-4'}`}>
         <div className="flex items-center gap-2 flex-wrap">
           {editing ? (
             <input
@@ -131,7 +131,7 @@ export function ChartCard({
         </div>
       </div>
 
-      <div className="w-full relative">
+      <div className="w-full relative flex-1 min-h-0 min-w-0">
         <ChartRenderer
           chartType={chartType}
           config={config}

@@ -90,6 +90,44 @@ export function detectStatIssues(scanPayload: ReturnType<typeof buildScanPayload
         ]
       })
     }
+
+    // Granularity: Full date when year is better
+    if (col.type === 'date' && col.uniqueCount > scanPayload.rowCount * 0.5) {
+      issues.push({
+        issue_type: 'granularity',
+        column_name: col.name,
+        severity: 'low',
+        title: 'Date column may be too granular',
+        description: `"${col.name}" contains full dates but year-level grouping may be more useful for trend analysis.`,
+        affected_rows: null,
+        options: [
+          { label: 'Extract year only', action: 'extract_year' },
+          { label: 'Keep full date', action: 'keep' },
+        ]
+      })
+    }
+
+    // List strings: Python list formats like ['Drama', 'Fantasy']
+    if (col.type === 'string' && col.sample) {
+      const listFormatCount = col.sample.filter((v: any) => 
+        typeof v === 'string' && v.trim().startsWith('[')
+      ).length
+
+      if (listFormatCount > col.sample.length * 0.3) {
+        issues.push({
+          issue_type: 'list_format',
+          column_name: col.name,
+          severity: 'medium',
+          title: 'Column contains list values',
+          description: `"${col.name}" stores multiple values per cell. It cannot be used for grouping or charting without parsing.`,
+          affected_rows: null,
+          options: [
+            { label: 'Exclude from charts', action: 'exclude' },
+            { label: 'Use first value only', action: 'use_first' },
+          ]
+        })
+      }
+    }
   }
 
   return issues

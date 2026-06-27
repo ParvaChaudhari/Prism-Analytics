@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 // AISummaryCard removed
 
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
@@ -40,11 +40,13 @@ async function fetchChartData(datasetId: string) {
 
 export function DashboardView() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const datasetId = typeof params.id === 'string' ? params.id : ''
+  const isGenerating = searchParams?.get('generate') === 'true'
   const exportRef = useRef<HTMLDivElement>(null)
 
-  const [shellLoading, setShellLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
+  const [shellLoading, setShellLoading] = useState(!isGenerating)
+  const [generating, setGenerating] = useState(isGenerating)
   const [chartsLoading, setChartsLoading] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -317,10 +319,29 @@ export function DashboardView() {
     }
   }
 
-  if (shellLoading || generating) {
+  if (generating) {
     return (
       <div className="flex-1 w-full flex flex-col">
-        <GalaxyLoading text={generating ? 'Prism is reading your data…' : 'Loading dashboard…'} />
+        <GalaxyLoading text="Prism is reading your data…" />
+      </div>
+    )
+  }
+
+  if (shellLoading) {
+    return (
+      <div className="page-container py-8 flex flex-col gap-6">
+        <Card className="p-8 flex flex-col gap-4">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <p className="text-sm text-text-secondary pt-2">
+            Loading dashboard…
+          </p>
+        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-80 rounded-xl" />
+          <Skeleton className="h-80 rounded-xl" />
+        </div>
       </div>
     )
   }
