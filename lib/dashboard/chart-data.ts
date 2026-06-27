@@ -1,4 +1,5 @@
 import type { ChartConfig, ChartType, ChartDataPoint } from '@/types/dashboard'
+import { getOrdinalOrder, sortByOrdinal } from '@/lib/dashboard/ordinal-sort'
 
 function toNumber(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v)) return v
@@ -210,7 +211,7 @@ export function buildChartSeries(
       }
     }
 
-    return Array.from(bucketMap.entries())
+    const groupedData = Array.from(bucketMap.entries())
       .slice(0, 20)
       .map(([name, gMap]) => {
         const point: ChartDataPoint = {
@@ -221,20 +222,29 @@ export function buildChartSeries(
         }
         return point
       })
-      .sort((a, b) => {
-        const aTotal = Object.entries(a)
-          .filter(([k]) => k !== 'name')
-          .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
-        const bTotal = Object.entries(b)
-          .filter(([k]) => k !== 'name')
-          .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
-        return bTotal - aTotal
-      })
+
+    const isOrdinalGroup = getOrdinalOrder(xAxis) !== null
+    if (isOrdinalGroup) {
+      return sortByOrdinal(groupedData, xAxis)
+    }
+
+    return groupedData.sort((a, b) => {
+      const aTotal = Object.entries(a)
+        .filter(([k]) => k !== 'name')
+        .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
+      const bTotal = Object.entries(b)
+        .filter(([k]) => k !== 'name')
+        .reduce((s, [, v]) => s + (typeof v === 'number' ? v : 0), 0)
+      return bTotal - aTotal
+    })
   }
 
   const groups = new Map<string, number[]>()
   for (const row of processedRows) {
-    const key = String(row[xAxis] ?? '(empty)')
+    const raw = row[xAxis]
+    // Skip null/empty values — don't render them as chart categories
+    if (raw == null || raw === '' || String(raw).toLowerCase() === 'null') continue
+    const key = String(raw)
     if (!groups.has(key)) groups.set(key, [])
     if (yAxis && config.aggregation !== 'count' && yAxis !== xAxis) {
       const n = toNumber(row[yAxis])
@@ -244,11 +254,17 @@ export function buildChartSeries(
     }
   }
 
-  return Array.from(groups.entries())
+  const grouped = Array.from(groups.entries())
     .map(([name, nums]) => ({
       name: name.length > 24 ? `${name.slice(0, 24)}…` : name,
       value: aggregate(nums, aggregation),
     }))
-    .sort((a, b) => (b.value as number) - (a.value as number))
+
+  const ordinalSorted = sortByOrdinal(grouped, xAxis)
+  const isOrdinal = getOrdinalOrder(xAxis) !== null
+
+  return (isOrdinal
+    ? ordinalSorted
+    : grouped.sort((a, b) => (b.value as number) - (a.value as number)))
     .slice(0, 24)
 }

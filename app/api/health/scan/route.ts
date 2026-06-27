@@ -274,7 +274,7 @@ For each issue provide:
 
 - affected_percent: as a string e.g. "12.4%"
 
-- options: array of [{label, action, description}] — 2-4 resolution choices
+- options: array of [{label, action, description, value}] — 2-4 resolution choices. If the action targets a specific bad value (e.g., action="map_to_null"), provide that specific bad value in the "value" field.
 
 - recommended: index of the recommended option (0-based)
 

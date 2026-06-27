@@ -8,6 +8,7 @@ export type ColumnSchema = {
   sample: Array<string | number | boolean | null>
   min?: number
   max?: number
+  defaultAggregation?: 'sum' | 'avg' | 'count'
 }
 
 export type DatasetSchema = {

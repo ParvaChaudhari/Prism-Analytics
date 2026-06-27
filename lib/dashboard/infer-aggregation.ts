@@ -56,8 +56,11 @@ const SUM_ALWAYS = [
 export function inferAggregation(
   columnName: string,
   max?: number | null,
-  min?: number | null
+  min?: number | null,
+  schemaDefault?: 'sum' | 'avg' | 'count'
 ): 'avg' | 'sum' | 'count' {
+  if (schemaDefault) return schemaDefault
+
   const col = columnName.toLowerCase()
 
   // Explicit prefix overrides everything

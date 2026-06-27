@@ -38,7 +38,7 @@ export async function GET(
     : await fetchCharts(admin, result.dashboard.id)
 
   const rows = await loadDatasetRows(admin, datasetId, user.id)
-  const schema = buildSchemaFromRows(rows)
+  const schema = (result.dataset.raw_schema as ReturnType<typeof buildSchemaFromRows>) ?? buildSchemaFromRows(rows)
 
   const statFixed = fixStatChartAggregations(
     charts.map((c) => {
@@ -71,7 +71,8 @@ export async function GET(
       effectiveAggregation = fixed.aggregation
     } else if (chart.chart_type !== 'stat' && config.yAxis) {
       // Re-infer so stored 'sum' on avg-type columns (BMI, calories, etc.) gets corrected
-      effectiveAggregation = inferAggregation(config.yAxis)
+      const schemaCol = schema.columns.find((c) => c.name === config.yAxis)
+      effectiveAggregation = inferAggregation(config.yAxis, schemaCol?.max, schemaCol?.min, schemaCol?.defaultAggregation)
     }
 
     const effectiveConfig: ChartConfig = { ...config, aggregation: effectiveAggregation }

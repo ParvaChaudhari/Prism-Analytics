@@ -69,6 +69,25 @@ export function AppNav() {
   const isDashboardActive = pathname.startsWith('/dashboard')
   const isUploadActive = pathname === '/upload' || pathname.startsWith('/health')
 
+  async function deleteDataset(id: string) {
+    if (!confirm('Are you sure you want to delete this dataset? This will also delete any associated dashboards and charts.')) return
+    
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/datasets/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setDatasets(prev => prev.filter(ds => ds.id !== id))
+        if (pathname.includes(id)) {
+          router.push('/home')
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete dataset:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <header className="bg-white border-b border-border-subtle sticky top-0 z-40 w-full">
       <div className="page-container flex h-12 items-center justify-between max-w-[var(--container-max)]">
@@ -133,18 +152,18 @@ export function AppNav() {
                     ) : (
                       <ul>
                         {datasets.map((ds) => (
-                          <li key={ds.id}>
+                          <li key={ds.id} className="relative group flex items-center">
                             <button
                               onClick={() => {
                                 setDropdownOpen(false)
                                 router.push(`/dashboard/${ds.id}`)
                               }}
-                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low transition-colors group"
+                              className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-surface-container-low transition-colors"
                             >
                               <div className="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center flex-shrink-0">
                                 <Icon name="table_chart" size={16} className="text-text-secondary group-hover:text-primary transition-colors" />
                               </div>
-                              <div className="min-w-0 flex-1">
+                              <div className="min-w-0 flex-1 pr-8">
                                 <p className="text-[13px] font-medium text-primary truncate">
                                   {ds.name}
                                 </p>
@@ -152,7 +171,16 @@ export function AppNav() {
                                   {ds.row_count?.toLocaleString() ?? '—'} rows
                                 </p>
                               </div>
-                              <Icon name="arrow_forward" size={14} className="text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                await deleteDataset(ds.id)
+                              }}
+                              className="absolute right-2 p-1.5 rounded-md hover:bg-red-50 text-text-secondary hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Delete dataset"
+                            >
+                              <Icon name="delete" size={16} />
                             </button>
                           </li>
                         ))}

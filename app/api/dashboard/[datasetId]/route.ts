@@ -26,7 +26,7 @@ export async function GET(
     }
 
     if (!result.dashboard) {
-      return NextResponse.json({ exists: false, columns: result.columns })
+      return NextResponse.json({ exists: false, columns: result.columns, schema: result.schema })
     }
 
     return NextResponse.json({
@@ -34,6 +34,7 @@ export async function GET(
       dashboard: result.dashboard,
       charts: result.charts,
       columns: result.columns,
+      schema: result.schema,
     })
   } catch (err) {
     console.error('GET /api/dashboard/[datasetId] error:', err)

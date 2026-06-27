@@ -10,6 +10,7 @@ export type CachedDashboard = {
   }
   charts: ChartItem[]
   columns: string[]
+  schema?: Array<{ name: string; type: string }>
   chartData: Record<string, ChartDataPoint[]>
   savedAt: number
 }

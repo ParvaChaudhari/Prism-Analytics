@@ -103,10 +103,10 @@ export function fixStatChartAggregations(
       profile.min = col.min
     }
 
-    let aggregation = inferStatAggregation(chart.yAxis, profile, chart.title)
+    let aggregation = col.defaultAggregation ?? inferStatAggregation(chart.yAxis, profile, chart.title)
 
     // Hard rule: 0–1 scale columns must never sum on stat cards
-    if (profile && profile.max <= 1 && profile.min >= 0) {
+    if (profile && profile.max <= 1 && profile.min >= 0 && !col.defaultAggregation) {
       aggregation = 'avg'
     }
 

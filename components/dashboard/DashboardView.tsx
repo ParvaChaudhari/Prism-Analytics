@@ -51,6 +51,7 @@ export function DashboardView() {
   const [dashboard, setDashboard] = useState<ApiDashboard | null>(null)
   const [charts, setCharts] = useState<ChartItem[]>([])
   const [columns, setColumns] = useState<string[]>([])
+  const [schema, setSchema] = useState<Array<{ name: string; type: string }>>([])
   const [chartData, setChartData] = useState<Record<string, ChartDataPoint[]>>({})
   const [modalOpen, setModalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -95,6 +96,7 @@ export function DashboardView() {
         dashboard: ApiDashboard
         charts: ChartItem[]
         columns: string[]
+        schema: Array<{ name: string; type: string }>
       }
     ) => {
       setChartsLoading(true)
@@ -131,6 +133,7 @@ export function DashboardView() {
         dashboard?: ApiDashboard
         charts?: ChartItem[]
         columns?: string[]
+        schema?: Array<{ name: string; type: string }>
         error?: string
       }
       if (!res.ok) throw new Error(data.error || 'Generation failed')
@@ -138,10 +141,12 @@ export function DashboardView() {
       setDashboard(data.dashboard)
       setCharts(data.charts ?? [])
       if (data.columns?.length) setColumns(data.columns)
+      if (data.schema?.length) setSchema(data.schema)
       await loadChartData(id, {
         dashboard: data.dashboard,
         charts: data.charts ?? [],
         columns: data.columns ?? [],
+        schema: data.schema ?? [],
       })
     },
     [loadChartData]
@@ -161,6 +166,7 @@ export function DashboardView() {
         setDashboard(cached.dashboard)
         setCharts(cached.charts ?? [])
         setColumns(cached.columns ?? [])
+        setSchema(cached.schema ?? [])
         if (cached.chartData && Object.keys(cached.chartData).length) {
           setChartData(cached.chartData)
           setShellLoading(false)
@@ -168,6 +174,7 @@ export function DashboardView() {
             dashboard: cached.dashboard,
             charts: cached.charts ?? [],
             columns: cached.columns ?? [],
+            schema: cached.schema ?? [],
           })
           return
         }
@@ -189,6 +196,7 @@ export function DashboardView() {
           dashboard?: ApiDashboard
           charts?: ChartItem[]
           columns?: string[]
+          schema?: Array<{ name: string; type: string }>
           error?: string
         }
         try {
@@ -205,11 +213,13 @@ export function DashboardView() {
         setDashboard(data.dashboard)
         setCharts(data.charts ?? [])
         if (data.columns?.length) setColumns(data.columns)
+        if (data.schema?.length) setSchema(data.schema)
         setShellLoading(false)
         await loadChartData(datasetId, {
           dashboard: data.dashboard,
           charts: data.charts ?? [],
           columns: data.columns ?? [],
+          schema: data.schema ?? [],
         })
       } catch (e) {
         if (cancelled) return
@@ -280,7 +290,7 @@ export function DashboardView() {
     setCharts(nextCharts)
     clearDashboardCache(datasetId)
     if (dashboard) {
-      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns, schema })
     }
   }
 
@@ -302,7 +312,7 @@ export function DashboardView() {
     setCharts(nextCharts)
     clearDashboardCache(datasetId)
     if (dashboard) {
-      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns, schema })
     }
   }
 
@@ -348,7 +358,6 @@ export function DashboardView() {
           onExport={handleExport}
           regenerating={regenerating}
           exporting={exporting}
-          summary={dashboard?.ai_summary}
           activeView={activeView}
           onViewChange={handleViewChange}
         />
@@ -397,6 +406,7 @@ export function DashboardView() {
           onClose={() => setModalOpen(false)}
           datasetId={datasetId}
           columns={columns}
+          schema={schema}
           onCreated={handleChartCreated}
         />
       </div>
