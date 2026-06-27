@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Icon } from '@/components/ui/Icon'
 import { IssueCard, type Issue } from '@/components/health/IssueCard'
+import { GalaxyLoading } from '@/components/ui/GalaxyLoading'
 
 type ScanResponse = { issues: Issue[]; aiNotice?: string }
 
@@ -113,12 +114,8 @@ export default function HealthCheckPage() {
 
   if (loading) {
     return (
-      <div className="page-container py-12 max-w-[var(--container-max)]">
-        <Card className="p-8 flex flex-col items-center gap-4 text-center">
-          <Icon name="analytics" size={40} className="text-secondary animate-pulse" />
-          <h2 className="text-2xl font-semibold text-primary">Data Health Checkup</h2>
-          <p className="text-text-secondary">Scanning your dataset for quality issues…</p>
-        </Card>
+      <div className="flex-1 w-full flex flex-col">
+        <GalaxyLoading text="AI Health Checkup in progress..." />
       </div>
     )
   }

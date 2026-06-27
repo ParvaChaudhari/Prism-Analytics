@@ -37,8 +37,7 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <form action={loginAsGuest}>
               <Button type="submit" size="lg" className="gap-2 w-full sm:w-auto shadow-md">
-                Try it out (Demo)
-                <Icon name="arrow_forward" size={18} />
+                Demo Mode
               </Button>
             </form>
             <Link href="/login">
@@ -86,7 +85,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="py-8 text-center text-[10px] uppercase tracking-widest text-text-tertiary border-t border-border-subtle">
-        © {new Date().getFullYear()} Prism Analytics
+        This is a demo project. Prism Analytics AI can make mistakes, please double-check insights.
       </footer>
     </div>
   )

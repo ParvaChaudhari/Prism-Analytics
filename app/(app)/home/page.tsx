@@ -45,7 +45,7 @@ export default async function HomePage() {
   const items = (datasets ?? []) as any[]
 
   return (
-    <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8">
+    <div className="page-container py-8 md:py-12 max-w-[var(--container-max)] flex flex-col gap-8 min-h-[calc(100vh-4rem)]">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-[32px] font-semibold text-primary tracking-tight mb-2">Your Datasets</h1>
@@ -107,6 +107,10 @@ export default async function HomePage() {
           </Link>
         </Card>
       )}
+
+      <footer className="mt-auto text-center text-[10px] uppercase tracking-widest text-text-tertiary border-t border-border-subtle pt-8 pb-4">
+        This is a demo project. Prism Analytics AI can make mistakes, please double-check insights.
+      </footer>
     </div>
   )
 }

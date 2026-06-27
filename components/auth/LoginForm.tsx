@@ -133,7 +133,7 @@ export function LoginForm() {
             </Link>
           </p>
           <p className="mt-6 text-[10px] uppercase tracking-widest text-text-tertiary">
-            © {new Date().getFullYear()} Prism Analytics
+            This is a demo project. Prism Analytics AI can make mistakes, please double-check insights.
           </p>
         </footer>
       </main>

@@ -47,7 +47,7 @@ export function DropZone({ accept = ['.csv', '.xlsx', '.xls'], disabled, onFile 
           <Icon name="cloud_upload" size={28} className="text-primary" />
         </div>
         <div className="text-lg font-semibold text-primary mb-2">Drag & drop your file here</div>
-        <div className="text-sm text-text-secondary">CSV or Excel • up to 50MB</div>
+        <div className="text-sm text-text-secondary">CSV or Excel • up to 3MB</div>
         <div className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-secondary">
           <Icon name="folder_open" size={18} />
           or browse files
