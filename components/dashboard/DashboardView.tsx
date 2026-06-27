@@ -7,7 +7,6 @@ import { useParams } from 'next/navigation'
 import { ChartGrid, type ChartItem } from '@/components/dashboard/ChartGrid'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { AddChartModal } from '@/components/dashboard/AddChartModal'
-import { StoryModal } from '@/components/dashboard/StoryModal'
 import { VirtualizedTable } from '@/components/dashboard/VirtualizedTable'
 import { ChatPanel } from '@/components/chat/ChatPanel'
 import { exportDashboardPdf } from '@/lib/dashboard/export-pdf'
@@ -52,11 +51,11 @@ export function DashboardView() {
   const [dashboard, setDashboard] = useState<ApiDashboard | null>(null)
   const [charts, setCharts] = useState<ChartItem[]>([])
   const [columns, setColumns] = useState<string[]>([])
+  const [schema, setSchema] = useState<Array<{ name: string; type: string }>>([])
   const [chartData, setChartData] = useState<Record<string, ChartDataPoint[]>>({})
   const [modalOpen, setModalOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
-
-  const [storyOpen, setStoryOpen] = useState(false)
+  const [pendingChartId, setPendingChartId] = useState<string | null>(null)
 
   const [activeView, setActiveView] = useState<'charts' | 'data'>('charts')
   const [rawData, setRawData] = useState<Array<Record<string, string | number>>>([])
@@ -97,6 +96,7 @@ export function DashboardView() {
         dashboard: ApiDashboard
         charts: ChartItem[]
         columns: string[]
+        schema: Array<{ name: string; type: string }>
       }
     ) => {
       setChartsLoading(true)
@@ -133,6 +133,7 @@ export function DashboardView() {
         dashboard?: ApiDashboard
         charts?: ChartItem[]
         columns?: string[]
+        schema?: Array<{ name: string; type: string }>
         error?: string
       }
       if (!res.ok) throw new Error(data.error || 'Generation failed')
@@ -140,10 +141,12 @@ export function DashboardView() {
       setDashboard(data.dashboard)
       setCharts(data.charts ?? [])
       if (data.columns?.length) setColumns(data.columns)
+      if (data.schema?.length) setSchema(data.schema)
       await loadChartData(id, {
         dashboard: data.dashboard,
         charts: data.charts ?? [],
         columns: data.columns ?? [],
+        schema: data.schema ?? [],
       })
     },
     [loadChartData]
@@ -163,6 +166,7 @@ export function DashboardView() {
         setDashboard(cached.dashboard)
         setCharts(cached.charts ?? [])
         setColumns(cached.columns ?? [])
+        setSchema(cached.schema ?? [])
         if (cached.chartData && Object.keys(cached.chartData).length) {
           setChartData(cached.chartData)
           setShellLoading(false)
@@ -170,6 +174,7 @@ export function DashboardView() {
             dashboard: cached.dashboard,
             charts: cached.charts ?? [],
             columns: cached.columns ?? [],
+            schema: cached.schema ?? [],
           })
           return
         }
@@ -191,6 +196,7 @@ export function DashboardView() {
           dashboard?: ApiDashboard
           charts?: ChartItem[]
           columns?: string[]
+          schema?: Array<{ name: string; type: string }>
           error?: string
         }
         try {
@@ -207,11 +213,13 @@ export function DashboardView() {
         setDashboard(data.dashboard)
         setCharts(data.charts ?? [])
         if (data.columns?.length) setColumns(data.columns)
+        if (data.schema?.length) setSchema(data.schema)
         setShellLoading(false)
         await loadChartData(datasetId, {
           dashboard: data.dashboard,
           charts: data.charts ?? [],
           columns: data.columns ?? [],
+          schema: data.schema ?? [],
         })
       } catch (e) {
         if (cancelled) return
@@ -264,7 +272,7 @@ export function DashboardView() {
     setError(null)
     try {
       const safeName = dashboard.title.replace(/[^\w\-]+/g, '-').slice(0, 40)
-      await exportDashboardPdf(exportRef.current, `${safeName || 'dashboard'}.pdf`)
+      await exportDashboardPdf(exportRef.current, dashboard.title, `${safeName || 'dashboard'}.pdf`)
     } catch {
       setError('Export failed. Please try again.')
     } finally {
@@ -282,7 +290,7 @@ export function DashboardView() {
     setCharts(nextCharts)
     clearDashboardCache(datasetId)
     if (dashboard) {
-      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns, schema })
     }
   }
 
@@ -304,18 +312,13 @@ export function DashboardView() {
     setCharts(nextCharts)
     clearDashboardCache(datasetId)
     if (dashboard) {
-      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns })
+      await loadChartData(datasetId, { dashboard, charts: nextCharts, columns, schema })
     }
   }
 
   if (shellLoading || generating) {
     return (
-      <div
-        className={[
-          'page-container py-8 max-w-[var(--container-max)] flex flex-col gap-6 transition-[padding] duration-300',
-          chatOpen ? 'lg:pr-[420px]' : '',
-        ].join(' ')}
-      >
+      <div className="page-container py-8 flex flex-col gap-6">
         <Card className="p-8 flex flex-col gap-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-full" />
@@ -344,68 +347,67 @@ export function DashboardView() {
 
   return (
     <>
-      <div className="flex-1 flex flex-col min-h-0 page-container max-w-[var(--container-max)] py-6 gap-6 relative">
+      <div
+        className="flex-1 flex flex-col min-h-0 page-container py-6 gap-6"
+      >
         <DashboardHeader
           title={dashboard?.title ?? 'Loading Dashboard...'}
           onAskAi={() => setChatOpen(true)}
           onAddChart={() => setModalOpen(true)}
           onRegenerate={handleRegenerate}
-          onStory={() => setStoryOpen(true)}
           onExport={handleExport}
           regenerating={regenerating}
           exporting={exporting}
-          summary={dashboard?.ai_summary}
           activeView={activeView}
           onViewChange={handleViewChange}
         />
 
-      <div ref={exportRef} className="flex-1 flex flex-col gap-6 min-h-0 bg-background">
-        {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100 flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-500 hover:text-red-700 font-medium"
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
+        <div ref={exportRef} className="flex-1 flex flex-col gap-6 min-h-0 bg-background">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-xl text-sm border border-red-100 flex items-center justify-between">
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-500 hover:text-red-700 font-medium"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
-        {activeView === 'charts' ? (
-          <ChartGrid
-            charts={charts}
-            chartData={chartData}
-            chartsLoading={chartsLoading}
-            onDelete={handleDelete}
-            onTitleChange={handleTitleChange}
-          />
-        ) : (
-          <div className="flex-1 flex flex-col min-h-0">
-            {rawDataLoading ? (
-              <div className="flex-1 flex flex-col gap-4">
-                <Skeleton className="h-10 w-full rounded-xl" />
-                <Skeleton className="flex-1 w-full rounded-xl" />
-              </div>
-            ) : (
-              <VirtualizedTable data={rawData} columns={columns} />
-            )}
-          </div>
-        )}
-      </div>
+          {activeView === 'charts' ? (
+            <ChartGrid
+              charts={charts}
+              chartData={chartData}
+              chartsLoading={chartsLoading}
+              onDelete={handleDelete}
+              onTitleChange={handleTitleChange}
+              onAskAboutChart={(chartId) => {
+                setPendingChartId(chartId)
+                setChatOpen(true)
+              }}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col min-h-0">
+              {rawDataLoading ? (
+                <div className="flex-1 flex flex-col gap-4">
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                  <Skeleton className="flex-1 w-full rounded-xl" />
+                </div>
+              ) : (
+                <VirtualizedTable data={rawData} columns={columns} />
+              )}
+            </div>
+          )}
+        </div>
 
-      <AddChartModal
+        <AddChartModal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           datasetId={datasetId}
           columns={columns}
+          schema={schema}
           onCreated={handleChartCreated}
-        />
-
-        <StoryModal
-          isOpen={storyOpen}
-          onClose={() => setStoryOpen(false)}
-          dashboardId={dashboard.id}
         />
       </div>
 
@@ -413,6 +415,10 @@ export function DashboardView() {
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         dashboardId={dashboard.id}
+        charts={charts}
+        chartData={chartData}
+        pendingChartId={pendingChartId}
+        onPendingChartConsumed={() => setPendingChartId(null)}
       />
     </>
   )

@@ -5,9 +5,10 @@ interface ModalProps {
   onClose: () => void
   children: React.ReactNode
   title?: string
+  className?: string
 }
 
-export function Modal({ isOpen, onClose, children, title }: ModalProps) {
+export function Modal({ isOpen, onClose, children, title, className }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -24,7 +25,7 @@ export function Modal({ isOpen, onClose, children, title }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
       <div 
-        className="w-full max-w-md animate-in fade-in zoom-in-95 slide-in-from-bottom-10 rounded-[18px] bg-surface-elevated shadow-lg border border-border-subtle p-6"
+        className={`w-full animate-in fade-in zoom-in-95 slide-in-from-bottom-10 rounded-[18px] bg-surface-elevated shadow-lg border border-border-subtle p-6 ${className || 'max-w-md'}`}
         role="dialog"
         aria-modal="true"
       >

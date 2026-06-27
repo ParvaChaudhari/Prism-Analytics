@@ -19,12 +19,14 @@ export function ChartGrid({
   chartsLoading,
   onDelete,
   onTitleChange,
+  onAskAboutChart,
 }: {
   charts: ChartItem[]
   chartData: Record<string, ChartDataPoint[]>
   chartsLoading?: boolean
   onDelete?: (id: string) => void
   onTitleChange?: (id: string, title: string) => void
+  onAskAboutChart?: (chartId: string) => void
 }) {
   const statCharts = charts.filter((c) => c.chart_type === 'stat')
   const regularCharts = charts.filter((c) => c.chart_type !== 'stat')
@@ -48,6 +50,7 @@ export function ChartGrid({
             isManual={chart.is_manual}
             onDelete={onDelete}
             onTitleChange={onTitleChange}
+            onAskAboutChart={onAskAboutChart}
             tall={tall}
           />
         </ErrorBoundary>

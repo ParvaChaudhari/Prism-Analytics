@@ -13,6 +13,7 @@ export type GeminiFeature =
   | 'nl_to_chart'
   | 'story'
   | 'compare'
+  | 'schema_aggregation'
 
 /** Primary model per feature (from updated plan) */
 export function modelForFeature(feature: GeminiFeature): string {
@@ -25,6 +26,7 @@ export function modelForFeature(feature: GeminiFeature): string {
     case 'chat':
     case 'story':
     case 'compare':
+    case 'schema_aggregation':
       return GEMINI_MODELS.lite
     default:
       return GEMINI_MODELS.lite

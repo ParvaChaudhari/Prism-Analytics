@@ -80,11 +80,18 @@ export function ChartRenderer({
       ...d,
       value: Number(d.value ?? d.y) || 0
     }))
-    console.log('PieChart Config:', config, 'Data:', pieData, 'Original:', data)
     return (
       <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
         <PieChart>
-          <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius="75%">
+          <Pie
+            data={pieData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius="75%"
+            isAnimationActive={false}
+          >
             {pieData.map((_, i) => (
               <Cell key={i} fill={COLORS[i % COLORS.length]} />
             ))}
@@ -104,7 +111,7 @@ export function ChartRenderer({
           <XAxis dataKey="x" type="number" />
           <YAxis dataKey="y" type="number" />
           <Tooltip formatter={formatTooltipValue} />
-          <Scatter data={data} fill="#005ab7" />
+          <Scatter data={data} fill="#005ab7" isAnimationActive={false} />
         </ScatterChart>
       </ResponsiveContainer>
     )
@@ -133,6 +140,7 @@ export function ChartRenderer({
               stroke={isMulti ? COLORS[i % COLORS.length] : chartAccent}
               strokeWidth={2}
               dot={false}
+              isAnimationActive={false}
             />
           ))}
         </LineChart>
@@ -158,6 +166,7 @@ export function ChartRenderer({
               stroke={isMulti ? COLORS[i % COLORS.length] : chartAccent}
               fill={isMulti ? COLORS[i % COLORS.length] : chartAccent}
               fillOpacity={0.2}
+              isAnimationActive={false}
             />
           ))}
         </AreaChart>
@@ -165,6 +174,7 @@ export function ChartRenderer({
     )
   }
 
+  // Default: bar chart
   return (
     <ResponsiveContainer width="100%" height={tall ? 300 : 200}>
       <BarChart data={data} barSize={36}>
@@ -186,6 +196,7 @@ export function ChartRenderer({
             dataKey={key}
             fill={isMulti ? COLORS[i % COLORS.length] : chartAccent}
             barSize={isMulti ? undefined : 36}
+            isAnimationActive={false}
           />
         ))}
       </BarChart>

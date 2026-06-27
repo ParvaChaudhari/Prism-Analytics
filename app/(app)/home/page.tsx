@@ -72,7 +72,7 @@ export default async function HomePage() {
                 <DeleteDatasetButton datasetId={d.id} />
                 <Link href={`/dashboard/${d.id}`} className="block h-full">
                   <Card className="p-0 overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
-                    <DashboardPreviewCard title={dashboardTitle || filename} />
+                    <DashboardPreviewCard title={dashboardTitle || filename} datasetId={d.id} />
                     <div className="p-5 flex flex-col gap-2 flex-1">
                       <h3 className="font-semibold text-primary truncate group-hover:text-secondary transition-colors pr-8">
                         {dashboardTitle || 'Untitled dashboard'}

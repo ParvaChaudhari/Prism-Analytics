@@ -8,11 +8,9 @@ type Props = {
   onAskAi: () => void
   onAddChart: () => void
   onRegenerate: () => void
-  onStory: () => void
   onExport: () => void
   regenerating?: boolean
   exporting?: boolean
-  summary?: string
   activeView: 'charts' | 'data'
   onViewChange: (view: 'charts' | 'data') => void
 }
@@ -22,11 +20,9 @@ export function DashboardHeader({
   onAskAi,
   onAddChart,
   onRegenerate,
-  onStory,
   onExport,
   regenerating,
   exporting,
-  summary,
   activeView,
   onViewChange,
 }: Props) {
@@ -42,17 +38,15 @@ export function DashboardHeader({
         <div className="flex items-center bg-surface-container-low border border-border-subtle rounded-lg p-1 mr-2">
           <button
             onClick={() => onViewChange('charts')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              activeView === 'charts' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
-            }`}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === 'charts' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
+              }`}
           >
             Charts
           </button>
           <button
             onClick={() => onViewChange('data')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              activeView === 'data' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
-            }`}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === 'data' ? 'bg-white shadow-sm text-primary' : 'text-text-secondary hover:text-primary'
+              }`}
           >
             Raw Data
           </button>
@@ -61,14 +55,14 @@ export function DashboardHeader({
         <Button variant="ai" size="sm" onClick={onAskAi} title="Ask AI" className="px-3 shadow-sm">
           <Icon name="auto_awesome" size={18} filled className="text-white" />
         </Button>
-        <Button variant="secondary" size="sm" onClick={onStory} title="Story Mode" className="px-3">
-          <Icon name="auto_stories" size={18} />
-        </Button>
         <Button variant="secondary" size="sm" onClick={onAddChart} title="Add Chart" className="px-3">
           <Icon name="add_chart" size={18} />
         </Button>
         <Button variant="secondary" size="sm" onClick={onRegenerate} disabled={regenerating} title="Regenerate Dashboard" className="px-3">
           <Icon name={regenerating ? "sync" : "refresh"} size={18} className={regenerating ? 'animate-spin' : ''} />
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onExport} disabled={exporting} title="Export PDF" className="px-3">
+          <Icon name={exporting ? "hourglass_empty" : "download"} size={18} />
         </Button>
       </div>
     </div>

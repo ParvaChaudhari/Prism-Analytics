@@ -31,7 +31,7 @@ export async function getDashboardByDatasetId(
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (dashError || !dashboard) return { dataset, dashboard: null, columns: columnsFromSchema(dataset.raw_schema) }
+  if (dashError || !dashboard) return { dataset, dashboard: null, columns: columnsFromSchema(dataset.raw_schema), schema: schemaFromRaw(dataset.raw_schema) }
 
   const charts = await fetchCharts(admin, dashboard.id)
 
@@ -40,7 +40,16 @@ export async function getDashboardByDatasetId(
     dashboard,
     charts,
     columns: columnsFromSchema(dataset.raw_schema),
+    schema: schemaFromRaw(dataset.raw_schema),
   }
+}
+
+export function schemaFromRaw(rawSchema: unknown): Array<{ name: string; type: string }> {
+  const schema =
+    rawSchema && typeof rawSchema === 'object' && 'columns' in (rawSchema as object)
+      ? (rawSchema as ReturnType<typeof buildSchemaFromRows>)
+      : null
+  return schema?.columns ?? []
 }
 
 export function columnsFromSchema(rawSchema: unknown): string[] {

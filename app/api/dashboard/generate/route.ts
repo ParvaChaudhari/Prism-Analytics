@@ -125,9 +125,10 @@ export async function POST(request: Request) {
       payload.charts = payload.charts.map((chart) => {
         if (!chart.yAxis) return chart
         const yCol = computedStats?.columns?.find((c: any) => c.name === chart.yAxis)
+        const schemaCol = schema.columns.find((c) => c.name === chart.yAxis)
         return {
           ...chart,
-          aggregation: inferAggregation(chart.yAxis, yCol?.max, yCol?.min)
+          aggregation: inferAggregation(chart.yAxis, yCol?.max, yCol?.min, schemaCol?.defaultAggregation)
         }
       })
       const statCards = payload.charts.filter(c => c.chart_type === 'stat').slice(0, 3)
@@ -174,6 +175,7 @@ export async function POST(request: Request) {
         dashboard,
         charts,
         columns: existing.columns,
+        schema: existing.schema,
         aiNotice: payload.aiNotice,
       })
     }
@@ -204,6 +206,7 @@ export async function POST(request: Request) {
       dashboard,
       charts,
       columns: existing.columns.length ? existing.columns : schema.columns.map((c) => c.name),
+      schema: existing.schema?.length ? existing.schema : schema.columns,
       aiNotice: payload.aiNotice,
     })
   } catch (err) {

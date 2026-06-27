@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { parseCsvFile } from '@/lib/parsers/csv'
 import { parseExcelFile } from '@/lib/parsers/excel'
 import { buildSchemaFromRows } from '@/lib/parsers/schema'
+import { inferSchemaAggregations } from '@/lib/health/infer-schema-aggregations'
 
 export const runtime = 'nodejs'
 
@@ -38,8 +39,9 @@ function applyResolutions(
     const action = r.action
     const column = r.column ?? null
 
-    if (action === 'keep_as_is') continue
+    if (action === 'keep_as_is' || action === 'keep') continue
 
+    // ── Null / missing ──────────────────────────────────────────────────────
     if (action === 'drop_rows_with_nulls' && column) {
       rows = rows.filter((row) => !isNullish(row[column]))
       continue
@@ -53,6 +55,19 @@ function applyResolutions(
       continue
     }
 
+    // ── Invalid category → null ─────────────────────────────────────────────
+    if (action === 'map_to_null' && column) {
+      const badValue = r.value // e.g. "island"
+      rows = rows.map((row) => {
+        if (badValue !== undefined && row[column] === badValue) {
+          return { ...row, [column]: null }
+        }
+        return row
+      })
+      continue
+    }
+
+    // ── Whitespace ───────────────────────────────────────────────────────────
     if (action === 'trim_strings') {
       rows = rows.map((row) => {
         const next: Record<string, unknown> = { ...row }
@@ -64,6 +79,7 @@ function applyResolutions(
       continue
     }
 
+    // ── Deduplication ────────────────────────────────────────────────────────
     if (action === 'dedupe_rows') {
       const seen = new Set<string>()
       rows = rows.filter((row) => {
@@ -74,10 +90,102 @@ function applyResolutions(
       })
       continue
     }
+
+    // ── Numeric column: drop rows with non-parseable values ──────────────────
+    if (action === 'drop_invalid' && column) {
+      rows = rows.filter((row) => {
+        const v = row[column]
+        if (isNullish(v)) return false
+        const n = Number(String(v).replace(/[,$%]/g, ''))
+        return Number.isFinite(n)
+      })
+      continue
+    }
+
+    // ── Numeric column: replace non-parseable values with column mean ─────────
+    if (action === 'fill_mean' && column) {
+      const nums = rows
+        .map((r) => Number(String(r[column] ?? '').replace(/[,$%]/g, '')))
+        .filter((n) => Number.isFinite(n))
+      const mean = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0
+      rows = rows.map((row) => {
+        const v = row[column]
+        const n = Number(String(v ?? '').replace(/[,$%]/g, ''))
+        if (!Number.isFinite(n)) return { ...row, [column]: mean }
+        return row
+      })
+      continue
+    }
+
+    // ── Cast string column → number ──────────────────────────────────────────
+    if (action === 'cast_number' && column) {
+      rows = rows.map((row) => {
+        const v = row[column]
+        const n = Number(String(v ?? '').replace(/[,$%]/g, ''))
+        return { ...row, [column]: Number.isFinite(n) ? n : null }
+      })
+      continue
+    }
+
+    // ── Cast column → string (no-op for text, strips non-string types) ────────
+    if (action === 'cast_string' && column) {
+      rows = rows.map((row) => {
+        const v = row[column]
+        return { ...row, [column]: v === null || v === undefined ? null : String(v) }
+      })
+      continue
+    }
+
+    // ── Cap outliers at ±3 standard deviations ───────────────────────────────
+    if (action === 'cap_outliers' && column) {
+      const nums = rows
+        .map((r) => Number(r[column]))
+        .filter((n) => Number.isFinite(n))
+      if (nums.length) {
+        const mean = nums.reduce((a, b) => a + b, 0) / nums.length
+        const stdDev = Math.sqrt(nums.reduce((a, b) => a + (b - mean) ** 2, 0) / nums.length)
+        const lo = mean - 3 * stdDev
+        const hi = mean + 3 * stdDev
+        rows = rows.map((row) => {
+          const n = Number(row[column])
+          if (!Number.isFinite(n)) return row
+          return { ...row, [column]: Math.min(Math.max(n, lo), hi) }
+        })
+      }
+      continue
+    }
+
+    // ── Drop rows that are outliers (>3 stdDev) ───────────────────────────────
+    if (action === 'drop_outliers' && column) {
+      const nums = rows
+        .map((r) => Number(r[column]))
+        .filter((n) => Number.isFinite(n))
+      if (nums.length) {
+        const mean = nums.reduce((a, b) => a + b, 0) / nums.length
+        const stdDev = Math.sqrt(nums.reduce((a, b) => a + (b - mean) ** 2, 0) / nums.length)
+        rows = rows.filter((row) => {
+          const n = Number(row[column])
+          if (!Number.isFinite(n)) return true // keep non-numeric (already handled elsewhere)
+          return Math.abs(n - mean) <= 3 * stdDev
+        })
+      }
+      continue
+    }
+
+    // ── Drop entire column from all rows ─────────────────────────────────────
+    if (action === 'drop_column' && column) {
+      rows = rows.map((row) => {
+        const next = { ...row }
+        delete next[column]
+        return next
+      })
+      continue
+    }
   }
 
   return rows
 }
+
 
 export async function POST(request: Request) {
   const supabase = await createUserClient()
@@ -102,7 +210,7 @@ export async function POST(request: Request) {
 
   const { data: upload, error: uploadError } = await admin
     .from('uploads')
-    .select('id, user_id, storage_path')
+    .select('id, user_id, storage_path, computed_stats')
     .eq('id', body.uploadId)
     .eq('user_id', user.id)
     .single()
@@ -166,6 +274,16 @@ export async function POST(request: Request) {
 
   const cleanedRows = applyResolutions(rawRows, resolved)
   const rawSchema = buildSchemaFromRows(rawRows)
+
+  // Use AI to determine default aggregation for numeric columns
+  const aiAggregations = await inferSchemaAggregations(rawSchema, upload.computed_stats, user.id)
+  if (Object.keys(aiAggregations).length > 0) {
+    for (const col of rawSchema.columns) {
+      if (col.type === 'number' && aiAggregations[col.name]) {
+        col.defaultAggregation = aiAggregations[col.name]
+      }
+    }
+  }
 
   const { data: datasetRow, error: datasetError } = await admin
     .from('datasets')
